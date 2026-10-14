@@ -15,4 +15,11 @@ public interface OrderRepository extends JpaRepository<PurchaseOrder, Long> {
 
     @Query("select distinct o from PurchaseOrder o join o.lines l where l.sellerId = :sellerId order by o.id desc")
     List<PurchaseOrder> findBySeller(long sellerId);
+
+    List<PurchaseOrder> findByStatusInOrderByIdAsc(java.util.Collection<ru.pacco.orders.OrderStatus> statuses);
+
+    List<PurchaseOrder> findByStatusAndReceivedAtBefore(ru.pacco.orders.OrderStatus status, java.time.Instant before);
+
+    @Query("select distinct o from PurchaseOrder o join o.lines l where l.sellerId is not null and o.status <> ru.pacco.orders.OrderStatus.CREATED")
+    List<PurchaseOrder> findWithSellerLines();
 }

@@ -113,14 +113,16 @@ class SellerFlowIntegrationTest {
                 .content("{\"productId\":" + loafers.getFirst() + ",\"size\":\"42\"}")).andExpect(status().isOk());
         mvc.perform(post("/api/carts/{id}/items", cartId).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"productId\":" + oil.getFirst() + "}")).andExpect(status().isOk());
-        String number = JsonPath.read(mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content("""
+        String created = mvc.perform(post("/api/orders").contentType(MediaType.APPLICATION_JSON).content("""
                         {"cartId":"%s","buyerName":"Иван Петров","phone":"79160000001","passport":"4500654321",
                          "inn":"770000000001","pickupPoint":"СДЭК · Москва","consent":true}""".formatted(cartId)))
-                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.number");
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String number = JsonPath.read(created, "$.number");
+        String key = JsonPath.read(created, "$.accessKey");
 
         mvc.perform(post("/api/seller/orders/{n}/confirm", number).with(user(DEMO_SELLER)))
                 .andExpect(status().isUnprocessableContent());
-        mvc.perform(post("/api/orders/{n}/pay", number)).andExpect(jsonPath("$.status").value("PAID"));
+        mvc.perform(post("/api/orders/{n}/pay", number).header("X-Order-Key", key)).andExpect(jsonPath("$.status").value("PAID"));
 
         mvc.perform(get("/api/seller/orders").with(user(DEMO_SELLER)))
                 .andExpect(jsonPath("$[?(@.number == '" + number + "')].confirmedBySeller").value(false))

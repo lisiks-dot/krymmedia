@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/client";
 import type { Seller } from "@/lib/cabinet";
 import { SellerContext } from "@/lib/seller-context";
+import { WorkHeader, WorkShell } from "@/components/Work";
 
 function Application({ previous, onDone }: { previous: Seller | null; onDone: (s: Seller) => void }) {
   const { call } = useAuth();
@@ -81,18 +82,31 @@ function Gate({ children }: { children: ReactNode }) {
 
   useEffect(load, [load]);
 
-  if (error) return <div className="empty">{error}</div>;
-  if (seller === undefined) return <div className="empty">Caricamento…</div>;
-  if (seller === null || seller.status === "REJECTED") return <Application previous={seller} onDone={setSeller} />;
+  const right = (
+    <>
+      <span className="work-user">{seller?.legalName ?? username}{seller ? <small>{username}</small> : null}</span>
+      <button className="btn sm on-dark" type="button" onClick={logout}>Esci</button>
+    </>
+  );
+  const frame = (body: ReactNode) => (
+    <WorkShell>
+      <WorkHeader area="Area venditori" home="/seller" right={right} />
+      <main className="wrap work-main" id="content">{body}</main>
+    </WorkShell>
+  );
+
+  if (error) return frame(<div className="empty">{error}</div>);
+  if (seller === undefined) return frame(<div className="skel" style={{ height: 240 }} />);
+  if (seller === null || seller.status === "REJECTED") return frame(<Application previous={seller} onDone={setSeller} />);
   if (seller.status === "PENDING") {
-    return (
+    return frame(
       <div className="panel">
         <h1>Richiesta in verifica</h1>
         <p style={{ margin: 0 }}>
           Grazie, {seller.legalName}. Verifichiamo Partita IVA e IBAN entro 3 giorni lavorativi e ti scriviamo a {seller.contactEmail}.
         </p>
         <div className="acts"><button className="btn ghost sm" type="button" onClick={load}>Aggiorna lo stato</button></div>
-      </div>
+      </div>,
     );
   }
 
@@ -101,18 +115,21 @@ function Gate({ children }: { children: ReactNode }) {
     { href: "/seller/orders", label: "Ordini" },
     { href: "/seller/payouts", label: "Pagamenti" },
   ];
+  const current = (href: string) => (href === "/seller" ? path === "/seller" : path.startsWith(href));
   return (
     <SellerContext.Provider value={seller}>
-      <div className="cabinet">
-        <nav className="side" aria-label="Area venditori">
-          {tabs.map((t) => (
-            <Link key={t.href} href={t.href} aria-current={path === t.href ? "page" : undefined}>{t.label}</Link>
-          ))}
-          <span className="who">{seller.legalName} · {username}</span>
-          <button className="btn ghost sm" type="button" onClick={logout}>Esci</button>
-        </nav>
-        <div className="stack">{children}</div>
-      </div>
+      <WorkShell>
+        <WorkHeader area="Area venditori" home="/seller" right={right} />
+        <div className="wrap work-main cabinet">
+          <nav className="side" aria-label="Area venditori">
+            {tabs.map((t) => (
+              <Link key={t.href} href={t.href} aria-current={current(t.href) ? "page" : undefined}>{t.label}</Link>
+            ))}
+            <Link href="/sell#regole" className="side-out">Regole e commissioni</Link>
+          </nav>
+          <main className="stack" id="content">{children}</main>
+        </div>
+      </WorkShell>
     </SellerContext.Provider>
   );
 }

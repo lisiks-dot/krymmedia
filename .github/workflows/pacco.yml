@@ -102,16 +102,16 @@ jobs:
       - name: Сборка и запуск всего стека
         run: docker compose up -d --build
       - name: Сквозная проверка через Caddy
-        run: BASE=http://localhost ADMIN_PASSWORD=change-me-now infra/smoke.sh
+        run: BASE=http://localhost ADMIN_PASSWORD=change-me-now STATE_FILE=/tmp/ilpacco-orders infra/smoke.sh
       - name: Браузер — вход через Keycloak в админку и кабинет продавца
         run: |
           mkdir -p /tmp/e2e e2e-screens
           npm install --prefix /tmp/e2e --no-audit --no-fund playwright@1
           /tmp/e2e/node_modules/.bin/playwright install --with-deps chromium
           cp infra/e2e/*.mjs /tmp/e2e/
-          BASE=http://localhost PASSWORD=change-me-now OUT=$PWD/e2e-screens node /tmp/e2e/cabinets.mjs
+          BASE=http://localhost PASSWORD=change-me-now OUT=$PWD/e2e-screens ORDERS_FILE=/tmp/ilpacco-orders node /tmp/e2e/cabinets.mjs
       - name: Браузер — витрина на компьютере и телефоне
-        run: BASE=http://localhost OUT=$PWD/e2e-screens node /tmp/e2e/storefront.mjs
+        run: BASE=http://localhost OUT=$PWD/e2e-screens ORDERS_FILE=/tmp/ilpacco-orders node /tmp/e2e/storefront.mjs
       - name: Скриншоты — в ветку ci-screenshots
         if: always() && github.event_name == 'push'
         run: |

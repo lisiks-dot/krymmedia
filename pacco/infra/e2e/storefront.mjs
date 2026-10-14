@@ -4,6 +4,7 @@ import { chromium } from "playwright";
 
 const BASE = process.env.BASE ?? "http://localhost";
 const OUT = process.env.OUT ?? "e2e-screens";
+const [atPickup, pickupKey] = (await import("node:fs")).readFileSync(process.env.ORDERS_FILE ?? "/tmp/ilpacco-orders", "utf8").trim().split("\n");
 
 async function expectText(page, text, what) {
   try {
@@ -52,6 +53,32 @@ try {
     await page.goto(`${BASE}/cart`);
     await expectText(page, "Одна посылка на заказ", "корзина");
     await page.screenshot({ path: `${OUT}/store-${name}-cart.png`, fullPage: true });
+
+    if (!mobile) {
+      console.log("  оформление → оплата → заказ");
+      await page.getByRole("link", { name: "Перейти к оформлению" }).click().catch(() => page.goto(`${BASE}/checkout`));
+      await expectText(page, "Данные для таможни", "оформление");
+      await page.fill("#name", "Анна Смирнова");
+      await page.fill("#phone", "+7 916 123-45-67");
+      await page.fill("#passport", "4500 123456");
+      await page.fill("#inn", "770123456789");
+      await page.locator("label[for=pay-sbp]").click();
+      await page.screenshot({ path: `${OUT}/store-${name}-checkout.png`, fullPage: true });
+      await page.getByRole("button", { name: /Перейти к оплате/ }).click();
+      await expectText(page, "Отсканируйте QR-код", "страница оплаты СБП");
+      await page.screenshot({ path: `${OUT}/store-${name}-pay.png`, fullPage: true });
+      await page.getByRole("button", { name: /^Оплатить/ }).click();
+      await expectText(page, "Оплата прошла", "заказ оплачен");
+      await expectText(page, "Отменить заказ", "отмена доступна");
+      await page.screenshot({ path: `${OUT}/store-${name}-order-paid.png`, fullPage: true });
+      await page.goto(`${BASE}/orders`);
+      await expectText(page, "Активные", "список заказов");
+    }
+
+    console.log("  заказ в пункте выдачи по ссылке из СМС");
+    await page.goto(`${BASE}/orders/${atPickup}?key=${pickupKey}`);
+    await expectText(page, "Код получения", "код получения");
+    await page.screenshot({ path: `${OUT}/store-${name}-order-pickup.png`, fullPage: true });
     await ctx.close();
   }
   if (errors.length) throw new Error(`Ошибки в браузере:\n${errors.join("\n")}`);

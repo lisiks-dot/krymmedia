@@ -1,0 +1,66 @@
+/* ilpacco.ru — вход для сотрудников и продавцов. Цвета как на витрине: лазурный — бренд и ссылки, оранжевый — главное действие. */
+@import url("https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Prata&display=swap");
+
+:root {
+  --ilp-brand: #0b5fd6;
+  --ilp-cta: #ff6b1a;
+  --ilp-cta-hover: #f25a08;
+  --ilp-cta-ink: #1c1206;
+  --ilp-ink: #15171c;
+  --ilp-muted: #5d6270;
+  --ilp-surface: #f4f5f7;
+  --ilp-line: #e2e5ea;
+  --pf-v5-global--FontFamily--text: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --pf-v5-global--FontFamily--heading: "Golos Text", system-ui, sans-serif;
+  --pf-v5-global--primary-color--100: var(--ilp-brand);
+  --pf-v5-global--link--Color: var(--ilp-brand);
+  --pf-v5-global--BorderRadius--sm: 12px;
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--ilp-cta);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--ilp-cta-hover);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--ilp-cta-hover);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--ilp-cta-hover);
+  --pf-v5-c-button--m-primary--Color: var(--ilp-cta-ink);
+  --pf-v5-c-button--m-primary--hover--Color: var(--ilp-cta-ink);
+  --pf-v5-c-button--m-primary--focus--Color: var(--ilp-cta-ink);
+  --pf-v5-c-button--m-primary--active--Color: var(--ilp-cta-ink);
+  --pf-v5-c-button--FontWeight: 600;
+  --pf-v5-c-button--BorderRadius: 12px;
+  --pf-v5-c-form-control--BorderRadius: 12px;
+}
+
+body, .pf-v5-c-login, .login-pf body {
+  background: var(--ilp-surface) !important;
+  font-family: "Golos Text", system-ui, sans-serif;
+  color: var(--ilp-ink);
+}
+
+/* логотип вместо названия realm */
+#kc-header-wrapper, .pf-v5-c-login__main-header-desc, .pf-v5-c-brand {
+  font-family: "Prata", Georgia, serif !important;
+  font-size: 40px !important;
+  letter-spacing: -.02em;
+  color: var(--ilp-ink) !important;
+  text-transform: none !important;
+}
+.ilp-logo span { font-family: "Golos Text", sans-serif; font-size: 15px; color: var(--ilp-brand); font-weight: 600; margin-left: 2px; }
+
+.pf-v5-c-login__main {
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(21, 23, 28, .06), 0 8px 24px rgba(21, 23, 28, .06);
+  overflow: hidden;
+}
+.pf-v5-c-login__main-header h1, #kc-page-title {
+  font-family: "Prata", Georgia, serif !important;
+  font-weight: 400 !important;
+  font-size: 28px !important;
+}
+.pf-v5-c-form-control { min-height: 48px; }
+.pf-v5-c-button.pf-m-primary, #kc-login { min-height: 48px; }
+.pf-v5-c-button.pf-m-primary:focus-visible { outline: 3px solid var(--ilp-brand); outline-offset: 2px; }
+.pf-v5-c-login__main-footer-band { background: transparent; border-top: 1px solid var(--ilp-line); }
+
+@media (prefers-color-scheme: dark) {
+  body, .pf-v5-c-login { background: #0f1115 !important; color: #eceef2; }
+  #kc-header-wrapper, .pf-v5-c-brand { color: #eceef2 !important; }
+  .ilp-logo span { color: #6aa6ff; }
+}

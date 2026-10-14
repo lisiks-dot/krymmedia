@@ -50,6 +50,11 @@ springdoc:
     path: /swagger-ui.html
 
 pacco:
+  orders:
+    confirm-hours: 24
+    ship-days: 3
+    storage-days: 7
+    return-window-days: 14
   commission:
     rates:
       CLOTHES: 0.18

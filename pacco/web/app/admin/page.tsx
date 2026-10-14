@@ -3,50 +3,83 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import type { OrderView, Product, Seller } from "@/lib/cabinet";
-import { rub } from "@/lib/format";
+import type { OrderView, Payouts, Product, Seller } from "@/lib/cabinet";
+import { eur, rub } from "@/lib/format";
+import type { DisputeView, OrderStatus } from "@/lib/types";
+
+type Tile = { href: string; label: string; value: string | number; hint: string; alert?: boolean };
 
 export default function AdminHome() {
-  const { call, has } = useAuth();
+  const { call, has, username } = useAuth();
   const [sellers, setSellers] = useState<Seller[] | null>(null);
   const [pending, setPending] = useState<Product[] | null>(null);
   const [orders, setOrders] = useState<OrderView[] | null>(null);
+  const [disputes, setDisputes] = useState<{ dispute: DisputeView }[] | null>(null);
+  const [payouts, setPayouts] = useState<{ payouts: Payouts }[] | null>(null);
 
   useEffect(() => {
     if (has("admin", "moderator")) {
       call<Seller[]>("/api/admin/sellers?status=PENDING").then(setSellers).catch(() => setSellers([]));
       call<Product[]>("/api/admin/products/pending").then(setPending).catch(() => setPending([]));
     }
-    if (has("admin", "support")) {
-      call<OrderView[]>("/api/admin/orders?limit=200").then(setOrders).catch(() => setOrders([]));
-    }
+    if (has("admin", "support", "ops")) call<OrderView[]>("/api/admin/orders?limit=200").then(setOrders).catch(() => setOrders([]));
+    if (has("admin", "support")) call<{ dispute: DisputeView }[]>("/api/admin/disputes?status=OPEN").then(setDisputes).catch(() => setDisputes([]));
+    if (has("admin", "finance")) call<{ payouts: Payouts }[]>("/api/admin/payouts").then(setPayouts).catch(() => setPayouts([]));
   }, [call, has]);
 
-  const paid = orders?.filter((o) => o.status === "PAID").length ?? 0;
-  const inTransit = orders?.filter((o) => o.statusStep >= 4 && o.statusStep <= 10).length ?? 0;
-  const gmv = orders?.filter((o) => o.status !== "CREATED" && o.status !== "CANCELLED").reduce((s, o) => s + o.totalRub, 0) ?? 0;
+  const count = (...s: OrderStatus[]) => orders?.filter((o) => s.includes(o.status)).length ?? 0;
+  const groups: { title: string; tiles: Tile[] }[] = [];
+
+  if (orders) {
+    const paidLate = orders.filter((o) => o.status === "PAID" && Date.now() - new Date(o.updatedAt).getTime() > 20 * 3600_000).length;
+    groups.push({
+      title: "Заказы по этапам",
+      tiles: [
+        { href: "/admin/orders", label: "Ждут продавца", value: count("PAID", "CONFIRMED"), hint: paidLate ? `${paidLate} — почти 24 часа без ответа` : "подтверждение до 24 ч", alert: paidLate > 0 },
+        ...(has("admin", "ops") ? [
+          { href: "/admin/hub", label: "Хаб: приёмка", value: count("TO_HUB"), hint: "едут от продавцов" },
+          { href: "/admin/hub", label: "Хаб: упаковка и передача", value: count("AT_HUB", "CONSOLIDATED"), hint: "отправить сегодня" },
+          { href: "/admin/delivery", label: "В пути и на таможне", value: count("HANDED_TO_CARRIER", "IN_CUSTOMS", "RELEASED"), hint: "до пункта выдачи" },
+          { href: "/admin/delivery", label: "В пунктах выдачи", value: count("AT_PICKUP_POINT"), hint: "ждут покупателя" },
+        ] : []),
+      ],
+    });
+    const money = orders.filter((o) => o.status !== "CREATED" && o.status !== "CANCELLED");
+    groups.push({
+      title: "Деньги покупателей",
+      tiles: [
+        { href: "/admin/orders", label: "Оплачено", value: rub(money.reduce((s, o) => s + o.totalRub, 0)), hint: `${money.length} заказов из последних ${orders.length}` },
+        { href: "/admin/orders", label: "Возвращено", value: rub(orders.reduce((s, o) => s + o.refundRub, 0)), hint: "отказы, проверки, споры" },
+      ],
+    });
+  }
+  const care: Tile[] = [];
+  if (disputes) care.push({ href: "/admin/disputes", label: "Открытые споры", value: disputes.length, hint: "ответ за 2 рабочих дня", alert: disputes.length > 0 });
+  if (sellers) care.push({ href: "/admin/sellers", label: "Заявки продавцов", value: sellers.length, hint: "проверка за 3 дня" });
+  if (pending) care.push({ href: "/admin/products", label: "Карточки на модерации", value: pending.length, hint: "SLA — 24 часа" });
+  if (payouts) care.push({ href: "/admin/payouts", label: "К выплате продавцам", value: eur(payouts.reduce((s, r) => s + r.payouts.payableNetEurCents, 0)), hint: "в ближайшем реестре" });
+  if (care.length) groups.push({ title: "Требует внимания", tiles: care });
 
   return (
     <>
-      <h1>Обзор</h1>
-      <div className="tiles">
-        {sellers ? (
-          <Link className="tile" href="/admin/sellers"><span className="small muted">Заявки продавцов</span><span className="v num">{sellers.length}</span><span className="small muted">ждут проверки</span></Link>
-        ) : null}
-        {pending ? (
-          <Link className="tile" href="/admin/products"><span className="small muted">Карточки на модерации</span><span className="v num">{pending.length}</span><span className="small muted">SLA — 24 часа</span></Link>
-        ) : null}
-        {orders ? (
-          <>
-            <Link className="tile" href="/admin/orders"><span className="small muted">Оплачены, ждут продавца</span><span className="v num">{paid}</span><span className="small muted">подтверждение до 24 ч</span></Link>
-            <Link className="tile" href="/admin/orders"><span className="small muted">В пути</span><span className="v num">{inTransit}</span><span className="small muted">от хаба до ПВЗ</span></Link>
-            <div className="tile"><span className="small muted">Оплачено покупателями</span><span className="v num">{rub(gmv)}</span><span className="small muted">последние {orders.length} заказов</span></div>
-          </>
-        ) : null}
+      <div className="page-head">
+        <h1>Добрый день, {username}</h1>
+        <p className="muted">Сводка по разделам, доступным вашей роли.</p>
       </div>
-      {!has("admin", "moderator", "support") ? (
-        <div className="panel muted">Для роли «Финансы» разделы выплат и реестров появятся на следующем этапе.</div>
-      ) : null}
+      {groups.length === 0 ? <div className="skel" style={{ height: 200 }} /> : groups.map((g) => (
+        <section key={g.title} className="stack">
+          <h2 className="h-small">{g.title}</h2>
+          <div className="tiles">
+            {g.tiles.map((t) => (
+              <Link key={t.label} className={`tile${t.alert ? " alert" : ""}`} href={t.href}>
+                <span className="small muted">{t.label}</span>
+                <span className="v num">{t.value}</span>
+                <span className="small muted">{t.hint}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ))}
     </>
   );
 }

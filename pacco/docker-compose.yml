@@ -53,6 +53,8 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-change-me-now}
     volumes:
       - ./infra/keycloak:/opt/keycloak/data/import:ro
+      # Тема страницы входа в стиле витрины (realm: loginTheme = ilpacco)
+      - ./infra/keycloak-theme/ilpacco:/opt/keycloak/themes/ilpacco:ro
     depends_on:
       postgres:
         condition: service_healthy

@@ -23,7 +23,7 @@ export default function SellerPayouts() {
     <>
       <h1>Pagamenti</h1>
       <p className="muted" style={{ margin: 0, maxWidth: "65ch" }}>
-        Paghiamo in euro ogni due settimane gli ordini completati, sull&apos;IBAN {seller.iban}. La commissione dipende dalla categoria: 18 % abbigliamento e calzature, 15 % cosmetica, 12 % casa e alimentari.
+        Paghiamo in euro ogni due settimane gli ordini completati — 14 giorni dopo la consegna, se il cliente non apre un reclamo — sull&apos;IBAN {seller.iban}. Gli articoli rimborsati al cliente non vengono pagati. La commissione dipende dalla categoria: 18 % abbigliamento e calzature, 15 % cosmetica, 12 % casa e alimentari.
       </p>
       <div className="tiles">
         <div className="tile"><span className="small muted">Da pagare (ordini completati)</span><span className="v num">{eur(p.payableNetEurCents)}</span><span className="small muted num">vendite {eur(p.payableGrossEurCents)} − commissione {eur(p.payableCommissionEurCents)}</span></div>

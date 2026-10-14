@@ -53,15 +53,39 @@ export async function cartId(): Promise<string> {
   return id;
 }
 
-export function rememberOrder(number: string) {
-  const list = myOrders().filter((n) => n !== number);
-  writeStorage(ORDERS_KEY, JSON.stringify([number, ...list].slice(0, 20)));
+/** Заказы этого браузера: номер → ключ покупателя. Ключ открывает код получения, отмену и спор. */
+export function rememberOrder(number: string, key?: string | null) {
+  const map = orderKeys();
+  if (key) map[number] = key;
+  else if (!(number in map)) map[number] = "";
+  const ordered = [number, ...Object.keys(map).filter((n) => n !== number)].slice(0, 30);
+  writeStorage(ORDERS_KEY, JSON.stringify(Object.fromEntries(ordered.map((n) => [n, map[n]]))));
+}
+
+function orderKeys(): Record<string, string> {
+  try {
+    const raw = JSON.parse(readStorage(ORDERS_KEY) ?? "{}") as unknown;
+    // старый формат — массив номеров без ключей
+    if (Array.isArray(raw)) return Object.fromEntries(raw.map((n) => [String(n), ""]));
+    return (raw ?? {}) as Record<string, string>;
+  } catch {
+    return {};
+  }
 }
 
 export function myOrders(): string[] {
-  try {
-    return JSON.parse(readStorage(ORDERS_KEY) ?? "[]") as string[];
-  } catch {
-    return [];
-  }
+  return Object.keys(orderKeys());
+}
+
+export function orderKey(number: string): string | null {
+  return orderKeys()[number] || null;
+}
+
+/** Запрос от имени покупателя заказа: с ключом, если он есть в этом браузере. */
+export function orderApi<T>(number: string, path = "", init?: RequestInit): Promise<T> {
+  const key = orderKey(number);
+  return api<T>(`/api/orders/${encodeURIComponent(number)}${path}`, {
+    ...init,
+    headers: { ...(init?.headers ?? {}), ...(key ? { "X-Order-Key": key } : {}) },
+  });
 }

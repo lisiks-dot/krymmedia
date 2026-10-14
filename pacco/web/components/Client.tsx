@@ -64,7 +64,7 @@ export function HeaderActions() {
   const { cart, fav } = useCounts();
   return (
     <nav className="actions" aria-label="Покупки">
-      <Link className="action" href="/seller"><IconStore /><span>Продавцам</span></Link>
+      <Link className="action" href="/sell"><IconStore /><span>Продавцам</span></Link>
       <Link className="action" href="/orders"><IconBox /><span>Заказы</span></Link>
       <Link className="action" href="/favorites" aria-label={`Избранное: ${fav}`}>
         <IconHeart /><span>Избранное</span>{fav ? <b className="count num">{fav}</b> : null}

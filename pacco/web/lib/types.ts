@@ -66,20 +66,84 @@ export interface CartView {
   quote: Quote | null;
 }
 
+export type OrderStatus =
+  | "CREATED" | "PAID" | "CONFIRMED" | "TO_HUB" | "AT_HUB" | "CONSOLIDATED" | "HANDED_TO_CARRIER"
+  | "IN_CUSTOMS" | "RELEASED" | "AT_PICKUP_POINT" | "RECEIVED" | "COMPLETED" | "CANCELLED";
+
+export type LineState = "PENDING" | "CONFIRMED" | "SHIPPED" | "ACCEPTED" | "DECLINED" | "REJECTED_AT_HUB" | "RETURNED";
+export type DisputeReason = "NOT_AS_DESCRIBED" | "DAMAGED" | "WRONG_ITEM" | "MISSING" | "SIZE";
+export type DisputeStatus = "OPEN" | "REFUNDED" | "REJECTED";
+export type PaymentMethod = "MIR" | "SBP";
+
+export interface OrderLine {
+  lineNo: number;
+  productId: number;
+  title: string;
+  sellerName: string;
+  sellerId: number | null;
+  category: Category;
+  size: string | null;
+  qty: number;
+  priceEurCents: number;
+  lineRub: number;
+  state: LineState;
+  stateLabel: string;
+  sellerTracking: string | null;
+  note: string | null;
+}
+
+export interface OrderEvent {
+  status: OrderStatus;
+  title: string;
+  note: string | null;
+  actor: string;
+  at: string;
+}
+
+export interface DisputeView {
+  id: number;
+  lines: number[];
+  reason: DisputeReason;
+  reasonLabel: string;
+  comment: string | null;
+  status: DisputeStatus;
+  statusLabel: string;
+  refundRub: number;
+  resolution: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
 export interface OrderView {
   number: string;
-  status: string;
+  status: OrderStatus;
   statusLabel: string;
   statusStep: number;
   mode: DeliveryMode;
   buyerName: string;
+  buyerPhone: string | null;
   pickupPoint: string;
-  items: { productId: number; title: string; sellerName: string; category: Category; size: string | null; qty: number; priceEurCents: number }[];
+  items: OrderLine[];
   goodsRub: number;
   deliveryRub: number;
   dutyRub: number;
   vatRub: number;
   totalRub: number;
+  refundRub: number;
+  paymentMethod: PaymentMethod | null;
+  cancelReason: string | null;
+  parcelWeightG: number | null;
+  carrierTracking: string | null;
+  pickupCode: string | null;
+  storageUntil: string | null;
+  receivedAt: string | null;
+  disputeUntil: string | null;
+  canPay: boolean;
+  canCancel: boolean;
+  canDispute: boolean;
+  accessKey: string | null;
+  events: OrderEvent[];
+  dispute: DisputeView | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -98,18 +162,3 @@ export interface Problem {
   detail?: string;
   errors?: string[];
 }
-
-export const ORDER_STEPS = [
-  "Создан",
-  "Оплачен",
-  "Подтверждён продавцом",
-  "Едет на хаб",
-  "Принят на хабе",
-  "Упакован в посылку",
-  "Передан перевозчику",
-  "На таможне",
-  "Выпущен",
-  "В ПВЗ или у курьера",
-  "Получен",
-  "Завершён",
-];

@@ -3,45 +3,90 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { WorkHeader, WorkShell } from "@/components/Work";
 import { AuthProvider, useAuth } from "@/lib/auth";
 
-const SECTIONS: { href: string; label: string; roles: string[] }[] = [
-  { href: "/admin", label: "Обзор", roles: ["admin", "moderator", "support", "finance"] },
-  { href: "/admin/sellers", label: "Продавцы", roles: ["admin", "moderator"] },
-  { href: "/admin/products", label: "Карточки", roles: ["admin", "moderator"] },
-  { href: "/admin/compliance", label: "Комплаенс", roles: ["admin", "moderator"] },
-  { href: "/admin/orders", label: "Заказы", roles: ["admin", "support"] },
+type Section = { href: string; label: string; roles: string[] };
+
+const GROUPS: { title: string; items: Section[] }[] = [
+  {
+    title: "Заказы",
+    items: [
+      { href: "/admin/orders", label: "Все заказы", roles: ["admin", "support", "ops"] },
+      { href: "/admin/hub", label: "Хаб в Милане", roles: ["admin", "ops"] },
+      { href: "/admin/delivery", label: "Таможня и ПВЗ", roles: ["admin", "ops"] },
+      { href: "/admin/disputes", label: "Споры", roles: ["admin", "support"] },
+    ],
+  },
+  {
+    title: "Каталог",
+    items: [
+      { href: "/admin/sellers", label: "Продавцы", roles: ["admin", "moderator"] },
+      { href: "/admin/products", label: "Карточки", roles: ["admin", "moderator"] },
+      { href: "/admin/compliance", label: "Комплаенс", roles: ["admin", "moderator"] },
+    ],
+  },
+  {
+    title: "Деньги",
+    items: [{ href: "/admin/payouts", label: "Выплаты продавцам", roles: ["admin", "finance"] }],
+  },
 ];
 
-const ROLE_LABEL: Record<string, string> = { admin: "Администратор", moderator: "Модератор", support: "Поддержка", finance: "Финансы" };
+const ROLE_LABEL: Record<string, string> = {
+  admin: "Администратор", moderator: "Модератор", support: "Поддержка", ops: "Хаб и доставка", finance: "Финансы",
+};
 
 function Shell({ children }: { children: ReactNode }) {
   const { username, roles, has, logout } = useAuth();
   const path = usePathname();
-  const staff = has("admin", "moderator", "support", "finance");
+  const staff = has(...Object.keys(ROLE_LABEL));
+  const who = roles.filter((r) => ROLE_LABEL[r]).map((r) => ROLE_LABEL[r]).join(", ");
+  const right = (
+    <>
+      <span className="work-user">{username}{who ? <small>{who}</small> : null}</span>
+      <button className="btn sm on-dark" type="button" onClick={logout}>Выйти</button>
+    </>
+  );
 
   if (!staff) {
     return (
-      <div className="empty">
-        У пользователя «{username}» нет прав сотрудника ilpacco. Продавцам — в <Link href="/seller">кабинет продавца</Link>.{" "}
-        <button className="btn ghost sm" type="button" onClick={logout}>Выйти</button>
-      </div>
+      <WorkShell>
+        <WorkHeader area="Операции" home="/admin" right={right} />
+        <main className="wrap work-main">
+          <div className="empty">
+            <b>У пользователя «{username}» нет прав сотрудника ilpacco</b>
+            <span>Продавцам — в <Link href="/seller">кабинет продавца</Link>.</span>
+          </div>
+        </main>
+      </WorkShell>
     );
   }
 
+  const current = (href: string) => (href === "/admin" ? path === "/admin" : path.startsWith(href));
+
   return (
-    <div className="cabinet">
-      <nav className="side" aria-label="Разделы админки">
-        {SECTIONS.filter((s) => has(...s.roles)).map((s) => (
-          <Link key={s.href} href={s.href} aria-current={path === s.href ? "page" : undefined}>{s.label}</Link>
-        ))}
-        <span className="who">
-          {username} · {roles.filter((r) => ROLE_LABEL[r]).map((r) => ROLE_LABEL[r]).join(", ")}
-        </span>
-        <button className="btn ghost sm" type="button" onClick={logout}>Выйти</button>
-      </nav>
-      <div className="stack">{children}</div>
-    </div>
+    <WorkShell>
+      <WorkHeader area="Операции" home="/admin" right={right} />
+      <div className="wrap work-main cabinet">
+        <nav className="side" aria-label="Разделы">
+          <Link href="/admin" aria-current={current("/admin") ? "page" : undefined}>Обзор</Link>
+          {GROUPS.map((g) => {
+            const items = g.items.filter((s) => has(...s.roles));
+            if (!items.length) return null;
+            return (
+              <div key={g.title} className="side-group">
+                <span className="side-title">{g.title}</span>
+                {items.map((s) => (
+                  <Link key={s.href} href={s.href} aria-current={current(s.href) ? "page" : undefined}>{s.label}</Link>
+                ))}
+              </div>
+            );
+          })}
+          <Link href="/" className="side-out">Открыть витрину</Link>
+        </nav>
+        <main className="stack" id="content">{children}</main>
+      </div>
+    </WorkShell>
   );
 }
 

@@ -23,7 +23,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
  * Витрина, корзина и оформление — публичные. Админка — по JWT из Keycloak,
- * роли берутся из realm_access.roles: admin, moderator, support, finance.
+ * роли берутся из realm_access.roles: admin, moderator, support, ops (хаб и доставка), finance.
  */
 @Configuration
 class SecurityConfig {
@@ -40,7 +40,11 @@ class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/admin/compliance/**").hasAnyRole("admin", "moderator")
                 .requestMatchers("/api/admin/compliance/**").hasRole("admin")
                 .requestMatchers("/api/admin/products/**").hasAnyRole("admin", "moderator")
+                .requestMatchers(HttpMethod.GET, "/api/admin/orders/**").hasAnyRole("admin", "support", "ops")
                 .requestMatchers("/api/admin/orders/**").hasAnyRole("admin", "support")
+                .requestMatchers("/api/admin/disputes/**").hasAnyRole("admin", "support")
+                .requestMatchers("/api/admin/payouts/**").hasAnyRole("admin", "finance")
+                .requestMatchers("/api/ops/**").hasAnyRole("admin", "ops")
                 .requestMatchers("/api/admin/sellers/**").hasAnyRole("admin", "moderator")
                 .requestMatchers("/api/admin/**").hasRole("admin")
                 .requestMatchers("/api/seller/**").authenticated()

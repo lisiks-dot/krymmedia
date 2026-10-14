@@ -40,10 +40,26 @@ curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"productId\":$loafer
 total=$(curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"productId\":$oil}" "$BASE/api/carts/$cart/items" | jq .quote.totalRub)
 [[ "$total" == "23140" ]] || fail "итог корзины $total, ожидали 23140"
 
+new_order() {
+  local cart
+  cart=$(curl -fsS -X POST "$BASE/api/carts" | jq -r .id)
+  curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"productId\":$loafers,\"size\":\"${2:-41}\"}" "$BASE/api/carts/$cart/items" >/dev/null
+  curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"productId\":$oil}" "$BASE/api/carts/$cart/items" >/dev/null
+  curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"cartId\":\"$cart\",\"mode\":\"GROUND\",\"buyerName\":\"$1\",\"phone\":\"+7 916 000-00-00\",\"passport\":\"4500123456\",\"inn\":\"770000000000\",\"pickupPoint\":\"СДЭК · Москва, ул. Покровка, 12\",\"consent\":true}" "$BASE/api/orders"
+}
+pay() { curl -fsS -X POST -H "X-Order-Key: $2" -H 'Content-Type: application/json' -d '{"method":"SBP"}' "$BASE/api/orders/$1/pay" | jq -r .status; }
+api_post() {
+  local body="${3:-}"
+  [[ -n "$body" ]] || body='{}'
+  curl -fsS -X POST -H "Authorization: Bearer $1" -H 'Content-Type: application/json' -d "$body" "$BASE$2"
+}
+
 step "Оформление и оплата"
-order=$(curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"cartId\":\"$cart\",\"mode\":\"GROUND\",\"buyerName\":\"Смоук Тест\",\"phone\":\"+7 916 000-00-00\",\"passport\":\"4500123456\",\"inn\":\"770000000000\",\"pickupPoint\":\"СДЭК · Москва\",\"consent\":true}" "$BASE/api/orders")
-number=$(jq -r .number <<<"$order")
-status=$(curl -fsS -X POST "$BASE/api/orders/$number/pay" | jq -r .status)
+order=$(new_order "Смоук Тест")
+number=$(jq -r .number <<<"$order"); key=$(jq -r .accessKey <<<"$order")
+code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/orders/$number/pay")
+[[ "$code" == "403" ]] || fail "оплата без ключа заказа: $code, ожидали 403"
+status=$(pay "$number" "$key")
 [[ "$status" == "PAID" ]] || fail "после оплаты статус $status"
 
 step "Админка без токена закрыта"
@@ -55,27 +71,72 @@ token_for() {
     "$BASE/auth/realms/pacco/protocol/openid-connect/token" | jq -r .access_token
 }
 
-step "Кабинет продавца: товары и подтверждение заказа"
-seller=$(token_for seller)
-[[ -n "$seller" && "$seller" != "null" ]] || fail "Keycloak не выдал токен продавцу"
+seller=$(token_for seller); ops=$(token_for ops); support=$(token_for support); admin=$(token_for admin)
+for t in "$seller" "$ops" "$support" "$admin"; do [[ -n "$t" && "$t" != "null" ]] || fail "Keycloak не выдал токен"; done
+
+step "Продавец подтверждает и отправляет на хаб"
 mine=$(curl -fsS -H "Authorization: Bearer $seller" "$BASE/api/seller/products" | jq length)
 (( mine >= 2 )) || fail "у демо-продавца $mine товаров"
-status=$(curl -fsS -X POST -H "Authorization: Bearer $seller" "$BASE/api/seller/orders/$number/confirm" | jq -r .status)
+status=$(api_post "$seller" "/api/seller/orders/$number/confirm" | jq -r .status)
 [[ "$status" == "CONFIRMED" ]] || fail "после подтверждения продавцом статус $status"
+status=$(api_post "$seller" "/api/seller/orders/$number/ship" '{"tracking":"BRT-7781"}' | jq -r .status)
+[[ "$status" == "TO_HUB" ]] || fail "после отправки на хаб статус $status"
 
-step "Админка с токеном Keycloak"
-token=$(token_for admin)
-[[ -n "$token" && "$token" != "null" ]] || fail "Keycloak не выдал токен"
-status=$(curl -fsS -X POST -H "Authorization: Bearer $token" "$BASE/api/admin/orders/$number/advance" | jq -r .status)
-[[ "$status" == "TO_HUB" ]] || fail "после продвижения статус $status"
+step "Хаб: приёмка, упаковка, передача перевозчику"
+status=$(api_post "$ops" "/api/ops/orders/$number/accept" '{"lines":[{"lineNo":0,"ok":true},{"lineNo":1,"ok":true}]}' | jq -r .status)
+[[ "$status" == "AT_HUB" ]] || fail "после приёмки статус $status"
+api_post "$ops" "/api/ops/orders/$number/pack" '{"weightGrams":1350}' >/dev/null
+status=$(api_post "$ops" "/api/ops/orders/$number/handover" '{"tracking":"CDEK-1000245"}' | jq -r .status)
+[[ "$status" == "HANDED_TO_CARRIER" ]] || fail "после передачи перевозчику статус $status"
+
+step "Таможня, ПВЗ, выдача по коду"
+api_post "$ops" "/api/ops/orders/$number/customs" >/dev/null
+api_post "$ops" "/api/ops/orders/$number/release" >/dev/null
+api_post "$ops" "/api/ops/orders/$number/arrive" >/dev/null
+[[ "$(curl -fsS "$BASE/api/orders/$number" | jq -r .pickupCode)" == "null" ]] || fail "код получения виден без ключа"
+pickup=$(curl -fsS -H "X-Order-Key: $key" "$BASE/api/orders/$number" | jq -r .pickupCode)
+[[ "$pickup" =~ ^[0-9]{6}$ ]] || fail "нет кода получения: $pickup"
+status=$(api_post "$ops" "/api/ops/orders/$number/issue" "{\"code\":\"$pickup\"}" | jq -r .status)
+[[ "$status" == "RECEIVED" ]] || fail "после выдачи статус $status"
+
+step "Спор и возврат"
+curl -fsS -X POST -H "X-Order-Key: $key" -H 'Content-Type: application/json' \
+  -d '{"lines":[1],"reason":"DAMAGED","comment":"Бутылка протекла"}' "$BASE/api/orders/$number/disputes" >/dev/null
+dispute=$(curl -fsS -H "Authorization: Bearer $support" "$BASE/api/admin/disputes?status=OPEN" | jq ".[] | select(.order.number == \"$number\") | .dispute.id")
+refund=$(api_post "$support" "/api/admin/disputes/$dispute/resolve" '{"refund":true}' | jq .order.refundRub)
+(( refund > 0 )) || fail "возврат по спору $refund"
+status=$(api_post "$ops" "/api/ops/orders/$number/complete" | jq -r .status)
+[[ "$status" == "COMPLETED" ]] || fail "после завершения статус $status"
+events=$(curl -fsS "$BASE/api/orders/$number" | jq '.events | length')
+(( events >= 12 )) || fail "в истории заказа $events событий"
+
+step "Заказы в разных статусах для кабинетов"
+o=$(new_order "Елена Орлова" 42); n2=$(jq -r .number <<<"$o"); pay "$n2" "$(jq -r .accessKey <<<"$o")" >/dev/null
+o=$(new_order "Павел Кузнецов" 43); n3=$(jq -r .number <<<"$o"); pay "$n3" "$(jq -r .accessKey <<<"$o")" >/dev/null
+api_post "$seller" "/api/seller/orders/$n3/confirm" >/dev/null
+api_post "$seller" "/api/seller/orders/$n3/ship" '{"tracking":"BRT-7790"}' >/dev/null
+o=$(new_order "Ольга Миронова" 40); n4=$(jq -r .number <<<"$o"); k4=$(jq -r .accessKey <<<"$o"); pay "$n4" "$k4" >/dev/null
+api_post "$admin" "/api/admin/orders/$n4/advance" >/dev/null
+api_post "$seller" "/api/seller/orders/$n4/ship" '{"tracking":"BRT-7799"}' >/dev/null
+api_post "$ops" "/api/ops/orders/$n4/accept" '{"lines":[{"lineNo":0,"ok":true},{"lineNo":1,"ok":true}]}' >/dev/null
+api_post "$ops" "/api/ops/orders/$n4/pack" '{"weightGrams":1290}' >/dev/null
+api_post "$ops" "/api/ops/orders/$n4/handover" '{"tracking":"CDEK-1000301"}' >/dev/null
+for s in customs release arrive; do api_post "$ops" "/api/ops/orders/$n4/$s" >/dev/null; done
+printf '%s\n%s\n%s\n%s\n' "$n4" "$k4" "$n2" "$n3" > "${STATE_FILE:-/tmp/ilpacco-orders}"
+
+step "Права"
 code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $seller" "$BASE/api/admin/orders")
 [[ "$code" == "403" ]] || fail "продавец получил доступ к админке: $code"
+code=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $support" "$BASE/api/ops/orders/$n3/accept")
+[[ "$code" == "403" ]] || fail "поддержка получила доступ к хабу: $code"
+code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(token_for finance)" "$BASE/api/admin/payouts")
+[[ "$code" == "200" ]] || fail "финансы не видят реестр выплат: $code"
 
-step "Страницы кабинетов отдаются"
-curl -fsS -o /dev/null "$BASE/admin" || fail "/admin недоступна"
-curl -fsS -o /dev/null "$BASE/seller" || fail "/seller недоступна"
+step "Страницы отдаются"
+for path in /admin /seller /sell /legal "/orders/$number" "/pay/$n4"; do
+  curl -fsS -o /dev/null "$BASE$path" || fail "$path недоступна"
+done
+curl -fsS "$BASE/auth/realms/pacco/protocol/openid-connect/auth?client_id=pacco-web&response_type=code&redirect_uri=$BASE/admin&scope=openid" \
+  | grep -q "ilpacco.css" || fail "страница входа без темы ilpacco"
 
-step "Трекинг на витрине"
-curl -fsS -o /dev/null "$BASE/orders/$number" || fail "страница заказа недоступна"
-
-printf '\nOK: заказ %s прошёл путь от каталога до подтверждения продавцом и передачи на хаб\n' "$number"
+printf '\nOK: заказ %s прошёл весь путь до выдачи, спора и завершения; для кабинетов созданы %s, %s, %s\n' "$number" "$n2" "$n3" "$n4"

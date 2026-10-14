@@ -72,9 +72,11 @@ class FlowIntegrationTest {
                 .andExpect(jsonPath("$.totalRub").value(23140))
                 .andReturn().getResponse().getContentAsString();
         String number = JsonPath.read(order, "$.number");
+        String key = JsonPath.read(order, "$.accessKey");
 
         mvc.perform(get("/api/carts/{id}", cartId)).andExpect(jsonPath("$.items").isEmpty());
-        mvc.perform(post("/api/orders/{n}/pay", number)).andExpect(jsonPath("$.status").value("PAID"));
+        mvc.perform(post("/api/orders/{n}/pay", number)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/orders/{n}/pay", number).header("X-Order-Key", key)).andExpect(jsonPath("$.status").value("PAID"));
 
         mvc.perform(post("/api/admin/orders/{n}/advance", number)).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/admin/orders/{n}/advance", number).with(role("support")))

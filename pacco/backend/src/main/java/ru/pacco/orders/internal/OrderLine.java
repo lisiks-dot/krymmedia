@@ -5,6 +5,7 @@ import jakarta.persistence.Embeddable;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 
+import ru.pacco.orders.LineState;
 import ru.pacco.shared.Category;
 
 /** Строка заказа — снимок товара и цены на момент покупки. */
@@ -36,8 +37,19 @@ public class OrderLine {
     @Column(name = "seller_id")
     private Long sellerId;
 
+    /** Устаревший флаг подтверждения; держим в согласии с {@link #state}. */
     @Column(nullable = false)
     private boolean confirmed;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private LineState state = LineState.PENDING;
+
+    @Column(name = "seller_tracking")
+    private String sellerTracking;
+
+    /** Причина отказа продавца или замечание хаба. */
+    private String note;
 
     protected OrderLine() {
     }
@@ -46,7 +58,10 @@ public class OrderLine {
                      long priceEurCents, Long sellerId) {
         this(productId, title, sellerName, category, size, qty, priceEurCents);
         this.sellerId = sellerId;
-        this.confirmed = sellerId == null;
+        // Товары оператора площадки уже лежат на хабе: подтверждать и отправлять их некому.
+        if (sellerId == null) {
+            moveTo(LineState.SHIPPED);
+        }
     }
 
     public OrderLine(long productId, String title, String sellerName, Category category, String size, int qty,
@@ -68,6 +83,29 @@ public class OrderLine {
     public int getQty() { return qty; }
     public long getPriceEurCents() { return priceEurCents; }
     public Long getSellerId() { return sellerId; }
-    public boolean isConfirmed() { return confirmed; }
-    public void confirm() { this.confirmed = true; }
+    public LineState getState() { return state; }
+    public String getSellerTracking() { return sellerTracking; }
+    public String getNote() { return note; }
+    public boolean isConfirmed() { return state != LineState.PENDING; }
+    public boolean isActive() { return state.active(); }
+    public boolean belongsTo(long seller) { return sellerId != null && sellerId == seller; }
+
+    public void moveTo(LineState next) {
+        this.state = next;
+        this.confirmed = next != LineState.PENDING;
+    }
+
+    public void confirm() { moveTo(LineState.CONFIRMED); }
+
+    public void ship(String tracking) {
+        moveTo(LineState.SHIPPED);
+        this.sellerTracking = tracking;
+    }
+
+    public void close(LineState reason, String note) {
+        moveTo(reason);
+        this.note = note;
+    }
+
+    public void remark(String note) { this.note = note; }
 }

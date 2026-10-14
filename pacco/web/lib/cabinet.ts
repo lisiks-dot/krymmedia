@@ -1,4 +1,4 @@
-import type { Category, OrderView, Product } from "./types";
+import type { Category, LineState, OrderStatus, OrderView, Product } from "./types";
 
 export type SellerStatus = "PENDING" | "ACTIVE" | "REJECTED";
 
@@ -27,14 +27,30 @@ export interface Violation {
   message: string;
 }
 
+export interface SellerOrderLine {
+  lineNo: number;
+  productId: number;
+  title: string;
+  size: string | null;
+  qty: number;
+  priceEurCents: number;
+  confirmed: boolean;
+  state: LineState;
+  tracking: string | null;
+  note: string | null;
+}
+
 export interface SellerOrder {
   number: string;
-  status: string;
+  status: OrderStatus;
   statusLabel: string;
   createdAt: string;
-  lines: { productId: number; title: string; size: string | null; qty: number; priceEurCents: number; confirmed: boolean }[];
+  lines: SellerOrderLine[];
   confirmedBySeller: boolean;
   goodsEurCents: number;
+  needsAnswer: boolean;
+  needsShipping: boolean;
+  confirmBy: string;
 }
 
 export interface Payouts {
@@ -44,6 +60,7 @@ export interface Payouts {
   pendingGrossEurCents: number;
   pendingCommissionEurCents: number;
   pendingNetEurCents: number;
+  completedLines: number;
 }
 
 export type { OrderView, Product };

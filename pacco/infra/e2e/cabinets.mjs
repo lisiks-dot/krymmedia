@@ -5,6 +5,8 @@ import { chromium } from "playwright";
 const BASE = process.env.BASE ?? "http://localhost";
 const PASSWORD = process.env.PASSWORD ?? "change-me-now";
 const OUT = process.env.OUT ?? "e2e-screens";
+// Заказы в разных статусах, которые подготовил infra/smoke.sh: [в ПВЗ, ключ, ждёт продавца, едет на хаб]
+const [atPickup, , paid, toHub] = (await import("node:fs")).readFileSync(process.env.ORDERS_FILE ?? "/tmp/ilpacco-orders", "utf8").trim().split("\n");
 
 async function login(page, user) {
   await page.waitForSelector("#username", { timeout: 60_000 });
@@ -28,6 +30,8 @@ try {
   console.log("Админка (admin)");
   const admin = await (await browser.newContext({ locale: "ru-RU" })).newPage();
   await admin.goto(`${BASE}/admin`);
+  await admin.waitForSelector("#username", { timeout: 60_000 });
+  await admin.screenshot({ path: `${OUT}/login.png` });
   await login(admin, "admin");
   await expectText(admin, "Заявки продавцов", "обзор с плитками");
   await admin.screenshot({ path: `${OUT}/admin-overview.png`, fullPage: true });
@@ -40,6 +44,35 @@ try {
   await admin.goto(`${BASE}/admin/compliance`);
   await expectText(admin, "Сохранить и перепроверить каталог", "форма правил");
 
+  console.log("Операции: хаб, доставка, карточка заказа, споры, выплаты");
+  await admin.goto(`${BASE}/admin/hub`);
+  await expectText(admin, toHub, "заказ в очереди приёмки");
+  await admin.screenshot({ path: `${OUT}/ops-hub.png`, fullPage: true });
+  const card = admin.locator(".qcard", { hasText: toHub });
+  await card.getByRole("button", { name: "Принять на хабе" }).click();
+  await expectText(admin, `${toHub}: приёмка завершена`, "приёмка на хабе");
+  await admin.getByRole("tab", { name: /Упаковка/ }).click();
+  await admin.locator(".qcard", { hasText: toHub }).getByRole("button", { name: "Упаковано" }).click();
+  await expectText(admin, `${toHub}: упакован`, "упаковка");
+  await admin.goto(`${BASE}/admin/delivery`);
+  await admin.getByRole("tab", { name: /В пунктах выдачи/ }).click();
+  await expectText(admin, atPickup, "заказ в ПВЗ");
+  await admin.screenshot({ path: `${OUT}/ops-delivery.png`, fullPage: true });
+  await admin.goto(`${BASE}/admin/orders/${atPickup}`);
+  await expectText(admin, "История", "карточка заказа");
+  await expectText(admin, "Передан перевозчику", "история событий");
+  await admin.screenshot({ path: `${OUT}/ops-order.png`, fullPage: true });
+  await admin.goto(`${BASE}/admin/disputes`);
+  await admin.getByRole("tab", { name: /С возвратом/ }).click();
+  await expectText(admin, "Повреждён", "решённый спор");
+  await admin.screenshot({ path: `${OUT}/ops-disputes.png`, fullPage: true });
+  await admin.goto(`${BASE}/admin/payouts`);
+  await expectText(admin, "Calzoleria Verdi", "реестр выплат");
+  await admin.screenshot({ path: `${OUT}/ops-payouts.png`, fullPage: true });
+  await admin.goto(`${BASE}/admin`);
+  await expectText(admin, "Хаб: упаковка и передача", "обзор по этапам");
+  await admin.screenshot({ path: `${OUT}/admin-overview.png`, fullPage: true });
+
   console.log("Кабинет продавца (seller)");
   const seller = await (await browser.newContext({ locale: "it-IT" })).newPage();
   await seller.goto(`${BASE}/seller`);
@@ -51,9 +84,23 @@ try {
   await expectText(seller, "C-01", "проверка комплаенса на лету");
   await seller.screenshot({ path: `${OUT}/seller-products.png`, fullPage: true });
   await seller.goto(`${BASE}/seller/orders`);
-  await expectText(seller, "PC-", "заказы продавца");
+  await expectText(seller, paid, "заказ ждёт подтверждения");
+  await seller.screenshot({ path: `${OUT}/seller-orders.png`, fullPage: true });
+  await seller.locator(".qcard", { hasText: paid }).getByRole("button", { name: "Conferma l'ordine" }).click();
+  await expectText(seller, `Ordine ${paid} confermato`, "подтверждение продавцом");
+  await seller.getByRole("tab", { name: /Da spedire/ }).click();
+  await seller.locator(".qcard", { hasText: paid }).getByLabel("Tracking del corriere").fill("BRT-55120");
+  await seller.locator(".qcard", { hasText: paid }).getByRole("button", { name: "Segna come spedito" }).click();
+  await expectText(seller, `Ordine ${paid}: spedizione registrata`, "отправка на хаб");
+  await seller.goto(`${BASE}/seller/orders/${paid}`);
+  await expectText(seller, "Hub Milano", "лист для посылки");
+  await seller.screenshot({ path: `${OUT}/seller-slip.png`, fullPage: true });
   await seller.goto(`${BASE}/seller/payouts`);
   await expectText(seller, "In arrivo", "выплаты продавца");
+
+  await seller.goto(`${BASE}/sell`);
+  await expectText(seller, "Come funziona", "страница для продавцов");
+  await seller.screenshot({ path: `${OUT}/sell-landing.png`, fullPage: true });
 
   console.log("Чужой пользователь не попадает в админку");
   await seller.goto(`${BASE}/admin`);
