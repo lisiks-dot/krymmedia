@@ -14,6 +14,10 @@ spring:
       ddl-auto: none
   flyway:
     enabled: true
+  jackson:
+    deserialization:
+      # Jackson 3 по умолчанию не пускает отсутствующие поля в примитивы; необязательные флаги считаем false/0.
+      fail-on-null-for-primitives: false
   data:
     redis:
       host: ${REDIS_HOST:localhost}
