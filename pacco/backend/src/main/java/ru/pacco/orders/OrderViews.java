@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import ru.pacco.orders.internal.Dispute;
 import ru.pacco.orders.internal.DisputeRepository;
+import ru.pacco.orders.internal.OrderPhotoRepository;
 import ru.pacco.orders.internal.OrderLine;
 import ru.pacco.orders.internal.PurchaseOrder;
 
@@ -21,10 +22,12 @@ public class OrderViews {
     private static final List<OrderStatus> CANCELLABLE = List.of(OrderStatus.CREATED, OrderStatus.PAID, OrderStatus.CONFIRMED);
 
     private final DisputeRepository disputes;
+    private final OrderPhotoRepository photos;
     private final OrdersProperties props;
 
-    public OrderViews(DisputeRepository disputes, OrdersProperties props) {
+    public OrderViews(DisputeRepository disputes, OrderPhotoRepository photos, OrdersProperties props) {
         this.disputes = disputes;
+        this.photos = photos;
         this.props = props;
     }
 
@@ -68,6 +71,11 @@ public class OrderViews {
                 buyer ? o.getAccessKey() : null,
                 o.getEvents().stream().map(e -> new OrderView.Event(e.getStatus(), e.getTitle(), e.getNote(), e.getActor(), e.getAt())).toList(),
                 last == null ? null : dispute(last),
+                full && o.getId() != null ? photos.findByOrderIdOrderById(o.getId()).stream()
+                        .map(m -> new OrderView.PhotoView(m.getId(), m.getLineNo(), m.getKind(), m.getCreatedAt())).toList() : List.of(),
+                full ? o.getBuyerEmail() : null,
+                o.getPickupPointId(),
+                o.getBuyerSub() != null,
                 o.getCreatedAt(), o.getUpdatedAt());
     }
 

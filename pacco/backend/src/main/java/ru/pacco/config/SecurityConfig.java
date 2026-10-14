@@ -43,11 +43,13 @@ class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/admin/orders/**").hasAnyRole("admin", "support", "ops")
                 .requestMatchers("/api/admin/orders/**").hasAnyRole("admin", "support")
                 .requestMatchers("/api/admin/disputes/**").hasAnyRole("admin", "support")
+                .requestMatchers("/api/admin/notifications/**").hasAnyRole("admin", "support")
                 .requestMatchers("/api/admin/payouts/**").hasAnyRole("admin", "finance")
                 .requestMatchers("/api/ops/**").hasAnyRole("admin", "ops")
                 .requestMatchers("/api/admin/sellers/**").hasAnyRole("admin", "moderator")
                 .requestMatchers("/api/admin/**").hasRole("admin")
                 .requestMatchers("/api/seller/**").authenticated()
+                .requestMatchers("/api/me/**").authenticated()
                 .requestMatchers("/api/**").permitAll()
                 .anyRequest().denyAll())
             .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(keycloakRoles())));

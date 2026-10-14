@@ -18,9 +18,11 @@ import ru.pacco.orders.OrderView;
 class OpsController {
 
     private final OrderOperations ops;
+    private final ru.pacco.orders.OrderPhotos photos;
 
-    OpsController(OrderOperations ops) {
+    OpsController(OrderOperations ops, ru.pacco.orders.OrderPhotos photos) {
         this.ops = ops;
+        this.photos = photos;
     }
 
     @GetMapping("/queues/{name}")
@@ -38,6 +40,14 @@ class OpsController {
     }
 
     record Code(String code) {
+    }
+
+    @PostMapping(path = "/orders/{number}/photos", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.CREATED)
+    OrderView.PhotoView photo(@PathVariable String number,
+                              @org.springframework.web.bind.annotation.RequestPart("file") org.springframework.web.multipart.MultipartFile file,
+                              @org.springframework.web.bind.annotation.RequestParam(required = false) Integer lineNo) {
+        return photos.hubUpload(number, lineNo, file);
     }
 
     @PostMapping("/orders/{number}/accept")

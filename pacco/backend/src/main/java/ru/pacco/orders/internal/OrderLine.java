@@ -51,6 +51,14 @@ public class OrderLine {
     /** Причина отказа продавца или замечание хаба. */
     private String note;
 
+    /** Выплата продавцу, в которую вошла строка; null — ещё не выплачена. */
+    @Column(name = "payout_id")
+    private Long payoutId;
+
+    /** Комиссия, зафиксированная при формировании выплаты. */
+    @Column(name = "commission_eur_cents")
+    private Long commissionEurCents;
+
     protected OrderLine() {
     }
 
@@ -108,4 +116,11 @@ public class OrderLine {
     }
 
     public void remark(String note) { this.note = note; }
+    public Long getPayoutId() { return payoutId; }
+    public Long getCommissionEurCents() { return commissionEurCents; }
+
+    public void includeIn(long payout, long commission) {
+        this.payoutId = payout;
+        this.commissionEurCents = commission;
+    }
 }

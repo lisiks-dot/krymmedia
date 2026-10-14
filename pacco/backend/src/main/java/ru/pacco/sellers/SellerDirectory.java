@@ -62,6 +62,11 @@ public class SellerDirectory {
         return all.stream().map(Seller::toView).toList();
     }
 
+    @Transactional(readOnly = true)
+    public SellerView get(long id) {
+        return require(id).toView();
+    }
+
     @Transactional
     public SellerView approve(long id) {
         Seller s = require(id);

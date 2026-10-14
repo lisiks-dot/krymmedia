@@ -18,6 +18,10 @@ spring:
     deserialization:
       # Jackson 3 по умолчанию не пускает отсутствующие поля в примитивы; необязательные флаги считаем false/0.
       fail-on-null-for-primitives: false
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 7MB
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -50,6 +54,13 @@ springdoc:
     path: /swagger-ui.html
 
 pacco:
+  public-url: ${PUBLIC_URL:http://localhost}
+  notifications:
+    interval-ms: 5000
+    # СМС через SMS.ru: без ключа сообщения только пишутся в журнал (статус LOGGED).
+    sms-ru-api-id: ${SMS_RU_API_ID:}
+    sms-sender: ${SMS_SENDER:}
+    mail-from: ${MAIL_FROM:ilpacco.ru <no-reply@ilpacco.ru>}
   orders:
     confirm-hours: 24
     ship-days: 3

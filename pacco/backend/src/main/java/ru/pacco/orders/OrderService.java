@@ -11,7 +11,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ru.pacco.buyers.BuyerProfiles;
 import ru.pacco.cart.CartLine;
+import ru.pacco.delivery.PickupPointView;
+import ru.pacco.delivery.PickupPoints;
 import ru.pacco.cart.CartService;
 import ru.pacco.orders.OrderViews.Audience;
 import ru.pacco.orders.internal.Dispute;
@@ -36,23 +39,35 @@ public class OrderService {
     private final PricingService pricing;
     private final PaymentGateway payments;
     private final OrderViews views;
+    private final PickupPoints points;
+    private final BuyerProfiles profiles;
 
     public OrderService(OrderRepository orders, DisputeRepository disputes, CartService carts, PricingService pricing,
-                        PaymentGateway payments, OrderViews views) {
+                        PaymentGateway payments, OrderViews views, PickupPoints points, BuyerProfiles profiles) {
         this.orders = orders;
         this.disputes = disputes;
         this.carts = carts;
         this.pricing = pricing;
         this.payments = payments;
         this.views = views;
+        this.points = points;
+        this.profiles = profiles;
     }
 
+    /** Оформление; sub — аккаунт покупателя, если он вошёл (заказ будет виден на всех устройствах). */
     @Transactional
-    public OrderView checkout(CheckoutRequest req) {
+    public OrderView checkout(CheckoutRequest req, String sub) {
         List<String> errors = new ArrayList<>();
         if (digits(req.phone()).length() != 11) errors.add("телефон должен содержать 11 цифр");
         if (digits(req.passport()).length() != 10) errors.add("серия и номер паспорта — 10 цифр");
         if (digits(req.inn()).length() != 12) errors.add("ИНН физлица — 12 цифр");
+        String pickupLabel = req.pickupPoint() == null ? "" : req.pickupPoint().trim();
+        if (req.pickupPointId() != null) {
+            pickupLabel = points.get(req.pickupPointId()).map(PickupPointView::label).orElse("");
+            if (pickupLabel.isEmpty()) errors.add("пункт выдачи не найден, выберите другой");
+        } else if (pickupLabel.isEmpty()) {
+            errors.add("выберите пункт выдачи");
+        }
         if (!errors.isEmpty()) {
             throw BusinessException.unprocessable("buyer_invalid", "Проверьте данные покупателя", errors);
         }
@@ -71,10 +86,16 @@ public class OrderService {
         String number = "PC-" + orders.nextNumber();
         String passport = digits(req.passport());
         PurchaseOrder order = new PurchaseOrder(number, mode, req.buyerName().trim(), digits(req.phone()),
-                "**** ***" + passport.substring(passport.length() - 3), req.pickupPoint().trim(),
+                "**** ***" + passport.substring(passport.length() - 3), pickupLabel,
                 quote.goodsRub(), quote.deliveryRub(), quote.dutyRub(), quote.vatRub(), quote.totalRub(),
                 lines.stream().map(l -> new OrderLine(l.product().id(), l.product().title(), l.product().sellerName(),
                         l.product().category(), l.size(), l.qty(), l.product().priceEurCents(), l.product().sellerId())).toList());
+        String email = req.email() == null || req.email().isBlank() ? null : req.email().trim();
+        order.contacts(email, req.pickupPointId());
+        if (sub != null) {
+            order.attachBuyer(sub);
+            profiles.rememberCheckout(sub, req.buyerName().trim(), digits(req.phone()), email, req.pickupPointId());
+        }
         orders.save(order);
         carts.clear(req.cartId());
         return views.view(order, Audience.BUYER);
@@ -82,8 +103,8 @@ public class OrderService {
 
     /** Оплата. В MVP эквайринг — заглушка, которая сразу подтверждает платёж. */
     @Transactional
-    public OrderView pay(String number, UUID key, PaymentMethod method) {
-        PurchaseOrder order = requireOwned(number, key);
+    public OrderView pay(String number, UUID key, String sub, PaymentMethod method) {
+        PurchaseOrder order = requireOwned(number, key, sub);
         if (order.getStatus() != OrderStatus.CREATED) {
             throw BusinessException.unprocessable("already_paid", "Заказ уже оплачен или отменён");
         }
@@ -94,8 +115,8 @@ public class OrderService {
 
     /** Покупатель отменяет заказ, пока продавцы не отправили товар на хаб. */
     @Transactional
-    public OrderView cancel(String number, UUID key) {
-        PurchaseOrder order = requireOwned(number, key);
+    public OrderView cancel(String number, UUID key, String sub) {
+        PurchaseOrder order = requireOwned(number, key, sub);
         if (!views.canCancel(order)) {
             throw BusinessException.unprocessable("cannot_cancel",
                     "Товар уже едет на хаб — отменить нельзя. После получения можно открыть спор");
@@ -106,8 +127,8 @@ public class OrderService {
 
     /** Спор по полученной посылке: в течение окна возврата, по выбранным строкам. */
     @Transactional
-    public OrderView dispute(String number, UUID key, DisputeRequest req) {
-        PurchaseOrder order = requireOwned(number, key);
+    public OrderView dispute(String number, UUID key, String sub, DisputeRequest req) {
+        PurchaseOrder order = requireOwned(number, key, sub);
         Dispute last = disputes.findFirstByOrderIdOrderByIdDesc(order.getId()).orElse(null);
         if (!views.canDispute(order, last)) {
             throw BusinessException.unprocessable("cannot_dispute",
@@ -123,14 +144,37 @@ public class OrderService {
         String comment = req.comment() == null || req.comment().isBlank() ? null : req.comment().trim();
         Instant now = Instant.now();
         disputes.save(new Dispute(order, lines, req.reason(), comment, now));
-        order.log("Открыт спор: " + req.reason().label().toLowerCase(), "Поддержка ответит в течение 2 рабочих дней", "buyer", now);
+        order.logNotify("Открыт спор: " + req.reason().label().toLowerCase(), "Поддержка ответит в течение 2 рабочих дней", "buyer", now);
         return views.view(order, Audience.BUYER);
     }
 
     @Transactional(readOnly = true)
-    public OrderView get(String number, UUID key) {
+    public OrderView get(String number, UUID key, String sub) {
         PurchaseOrder order = require(number);
-        return views.view(order, key != null && key.equals(order.getAccessKey()) ? Audience.BUYER : Audience.PUBLIC);
+        return views.view(order, owns(order, key, sub) ? Audience.BUYER : Audience.PUBLIC);
+    }
+
+    /** Заказы аккаунта, новые сверху. */
+    @Transactional(readOnly = true)
+    public List<OrderView> mine(String sub) {
+        return orders.findByBuyerSubOrderByIdDesc(sub).stream().map(o -> views.view(o, Audience.BUYER)).toList();
+    }
+
+    public record Claim(String number, UUID key) {
+    }
+
+    /** Привязать к аккаунту заказы, оформленные в этом браузере без входа (по ключу). Чужие и уже привязанные пропускаем. */
+    @Transactional
+    public List<OrderView> claim(String sub, List<Claim> claims) {
+        for (Claim c : claims == null ? List.<Claim>of() : claims) {
+            orders.findByNumber(c.number())
+                    .filter(o -> o.getBuyerSub() == null && c.key() != null && c.key().equals(o.getAccessKey()))
+                    .ifPresent(o -> {
+                        o.attachBuyer(sub);
+                        o.log("Заказ привязан к аккаунту", null, "buyer", Instant.now());
+                    });
+        }
+        return mine(sub);
     }
 
     @Transactional(readOnly = true)
@@ -185,12 +229,17 @@ public class OrderService {
         return orders.findByNumber(number).orElseThrow(() -> BusinessException.notFound("Заказ"));
     }
 
-    private PurchaseOrder requireOwned(String number, UUID key) {
+    PurchaseOrder requireOwned(String number, UUID key, String sub) {
         PurchaseOrder order = require(number);
-        if (key == null || !key.equals(order.getAccessKey())) {
+        if (!owns(order, key, sub)) {
             throw new BusinessException(403, "order_key", "Действие доступно только покупателю этого заказа", List.of());
         }
         return order;
+    }
+
+    /** Владелец — по ключу из браузера или СМС, либо по аккаунту. */
+    private static boolean owns(PurchaseOrder o, UUID key, String sub) {
+        return (key != null && key.equals(o.getAccessKey())) || (sub != null && sub.equals(o.getBuyerSub()));
     }
 
     private static String digits(String s) {

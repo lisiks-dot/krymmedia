@@ -42,6 +42,10 @@ public record OrderView(
         UUID accessKey,
         List<Event> events,
         DisputeView dispute,
+        List<PhotoView> photos,
+        String buyerEmail,
+        Long pickupPointId,
+        boolean linkedToAccount,
         Instant createdAt,
         Instant updatedAt) {
 
@@ -51,6 +55,9 @@ public record OrderView(
     }
 
     public record Event(OrderStatus status, String title, String note, String actor, Instant at) {
+    }
+
+    public record PhotoView(long id, Integer lineNo, String kind, Instant createdAt) {
     }
 
     public record DisputeView(long id, List<Integer> lines, DisputeReason reason, String reasonLabel, String comment,

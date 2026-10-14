@@ -10,6 +10,8 @@ public interface OrderRepository extends JpaRepository<PurchaseOrder, Long> {
 
     Optional<PurchaseOrder> findByNumber(String number);
 
+    List<PurchaseOrder> findByBuyerSubOrderByIdDesc(String buyerSub);
+
     @Query(value = "select nextval('order_number_seq')", nativeQuery = true)
     long nextNumber();
 
@@ -22,4 +24,7 @@ public interface OrderRepository extends JpaRepository<PurchaseOrder, Long> {
 
     @Query("select distinct o from PurchaseOrder o join o.lines l where l.sellerId is not null and o.status <> ru.pacco.orders.OrderStatus.CREATED")
     List<PurchaseOrder> findWithSellerLines();
+
+    @Query("select distinct o from PurchaseOrder o join o.lines l where l.payoutId = :payoutId order by o.id")
+    List<PurchaseOrder> findByPayout(Long payoutId);
 }

@@ -72,12 +72,29 @@ services:
       OIDC_JWKS: http://keycloak:8080/auth/realms/pacco/protocol/openid-connect/certs
       CORS_ORIGINS: ${PUBLIC_URL:-http://localhost}
       VAT_ENABLED: ${VAT_ENABLED:-false}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost}
+      # Почта: по умолчанию — Mailpit (письма видны на http://127.0.0.1:8025, наружу не уходят).
+      # Для рассылки подставьте свой SMTP: MAIL_HOST, MAIL_PORT, MAIL_USERNAME, MAIL_PASSWORD.
+      SPRING_MAIL_HOST: ${MAIL_HOST:-mailpit}
+      SPRING_MAIL_PORT: ${MAIL_PORT:-1025}
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-ilpacco.ru <no-reply@ilpacco.ru>}
+      # СМС: ключ API SMS.ru; без него СМС только пишутся в журнал уведомлений.
+      SMS_RU_API_ID: ${SMS_RU_API_ID:-}
+      SMS_SENDER: ${SMS_SENDER:-}
       RUB_PER_EUR: ${RUB_PER_EUR:-113.3}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  mailpit:
+    image: axllent/mailpit:v1.24
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
 
   web:
     image: ${REGISTRY:-ghcr.io/lisiks-dot}/pacco-web:${TAG:-latest}

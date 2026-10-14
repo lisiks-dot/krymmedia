@@ -54,13 +54,13 @@ public class DisputeService {
             }
             o.refund(rub);
             d.resolve(DisputeStatus.REFUNDED, rub, text == null ? "Вернули деньги за товар" : text, now);
-            o.log("Спор решён: вернём " + rub + " ₽", "Деньги придут на карту за 1–3 рабочих дня. Товар отправлять обратно не нужно", "support", now);
+            o.logNotify("Спор решён: вернём " + rub + " ₽", "Деньги придут на карту за 1–3 рабочих дня. Товар отправлять обратно не нужно", "support", now);
         } else {
             if (text == null) {
                 throw BusinessException.unprocessable("resolution_required", "Объясните покупателю, почему спор отклонён");
             }
             d.resolve(DisputeStatus.REJECTED, 0, text, now);
-            o.log("Спор отклонён", text, "support", now);
+            o.logNotify("Спор отклонён", text, "support", now);
         }
         return new Case(OrderViews.dispute(d), views.view(o, Audience.STAFF));
     }

@@ -109,6 +109,16 @@ public class PurchaseOrder {
     @Column(name = "received_at")
     private Instant receivedAt;
 
+    /** Аккаунт покупателя (sub из Keycloak); null — заказ без входа, доступ по ключу. */
+    @Column(name = "buyer_sub")
+    private String buyerSub;
+
+    @Column(name = "buyer_email")
+    private String buyerEmail;
+
+    @Column(name = "pickup_point_id")
+    private Long pickupPointId;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "order_lines", joinColumns = @JoinColumn(name = "order_id"))
     @OrderColumn(name = "line_no")
@@ -149,16 +159,33 @@ public class PurchaseOrder {
         moveTo(next, next.label(), null, "system", at);
     }
 
+    /** Статусы, о которых покупатель получает СМС и письмо. */
+    private static final java.util.Set<OrderStatus> NOTIFY = java.util.EnumSet.of(OrderStatus.PAID,
+            OrderStatus.HANDED_TO_CARRIER, OrderStatus.AT_PICKUP_POINT, OrderStatus.RECEIVED, OrderStatus.CANCELLED);
+
     public void moveTo(OrderStatus next, String title, String note, String actor, Instant at) {
         this.status = next;
         this.updatedAt = at;
-        log(title, note, actor, at);
+        events.add(new OrderEvent(status, title, note, actor, at, NOTIFY.contains(next)));
     }
 
     /** Событие без смены статуса: отказ по строке, замечание хаба, спор. */
     public void log(String title, String note, String actor, Instant at) {
-        events.add(new OrderEvent(status, title, note, actor, at));
+        events.add(new OrderEvent(status, title, note, actor, at, false));
         this.updatedAt = at;
+    }
+
+    /** Событие без смены статуса, о котором нужно сообщить покупателю (возврат денег, решение по спору). */
+    public void logNotify(String title, String note, String actor, Instant at) {
+        events.add(new OrderEvent(status, title, note, actor, at, true));
+        this.updatedAt = at;
+    }
+
+    public void attachBuyer(String sub) { this.buyerSub = sub; }
+
+    public void contacts(String email, Long pickupPointId) {
+        this.buyerEmail = email;
+        this.pickupPointId = pickupPointId;
     }
 
     /** Доля строки в сумме товаров в рублях — по ней возвращаем деньги за отменённые позиции. */
@@ -243,4 +270,7 @@ public class PurchaseOrder {
     public String getPickupCode() { return pickupCode; }
     public LocalDate getStorageUntil() { return storageUntil; }
     public Instant getReceivedAt() { return receivedAt; }
+    public String getBuyerSub() { return buyerSub; }
+    public String getBuyerEmail() { return buyerEmail; }
+    public Long getPickupPointId() { return pickupPointId; }
 }

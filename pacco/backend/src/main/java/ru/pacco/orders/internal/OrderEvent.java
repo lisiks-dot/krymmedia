@@ -38,16 +38,31 @@ public class OrderEvent {
     @Column(nullable = false)
     private Instant at;
 
+    /** Нужно ли сообщить покупателю (исходящая очередь уведомлений). */
+    @Column(nullable = false)
+    private boolean notify;
+
+    @Column(name = "notified_at")
+    private Instant notifiedAt;
+
+    @Column(name = "order_id", insertable = false, updatable = false)
+    private Long orderId;
+
     protected OrderEvent() {
     }
 
-    OrderEvent(OrderStatus status, String title, String note, String actor, Instant at) {
+    OrderEvent(OrderStatus status, String title, String note, String actor, Instant at, boolean notify) {
         this.status = status;
         this.title = title;
         this.note = note;
         this.actor = actor;
         this.at = at;
+        this.notify = notify;
     }
+
+    public Long getId() { return id; }
+    public Long getOrderId() { return orderId; }
+    public void notified(Instant when) { this.notifiedAt = when; }
 
     public OrderStatus getStatus() { return status; }
     public String getTitle() { return title; }

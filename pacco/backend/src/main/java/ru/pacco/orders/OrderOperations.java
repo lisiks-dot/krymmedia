@@ -87,7 +87,7 @@ public class OrderOperations {
                 l.close(LineState.REJECTED_AT_HUB, why);
                 long rub = o.lineRub(l);
                 o.refund(rub);
-                o.log("Не прошёл проверку: " + l.getTitle(), why + ". Вернём " + rub + " ₽", "hub", now);
+                o.logNotify("Не прошёл проверку: " + l.getTitle(), why + ". Вернём " + rub + " ₽", "hub", now);
             }
         }
         if (o.getLines().stream().anyMatch(l -> l.getState() == LineState.SHIPPED)) {

@@ -101,7 +101,7 @@ public class SellerOrders {
                 l.close(LineState.DECLINED, why);
                 long rub = o.lineRub(l);
                 refund += rub;
-                o.log(titlePrefix + l.getTitle(), why + ". Вернём " + rub + " ₽", actor, now);
+                o.logNotify(titlePrefix + l.getTitle(), why + ". Вернём " + rub + " ₽", actor, now);
             }
         }
         o.refund(refund);
@@ -183,7 +183,8 @@ public class SellerOrders {
                 continue;
             }
             for (OrderLine l : o.getLines()) {
-                if (l.getSellerId() == null || !l.isActive()) {
+                // в реестр уже вошли — к выплате больше не считаем
+                if (l.getSellerId() == null || !l.isActive() || l.getPayoutId() != null) {
                     continue;
                 }
                 long gross = l.getPriceEurCents() * l.getQty();
