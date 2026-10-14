@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: pacco
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/pacco}
+    username: ${DB_USER:pacco}
+    password: ${DB_PASSWORD:pacco}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Токены выдаёт Keycloak за обратным прокси; ключи берём по внутреннему адресу.
+          issuer-uri: ${OIDC_ISSUER:http://localhost/auth/realms/pacco}
+          jwk-set-uri: ${OIDC_JWKS:http://localhost:8081/auth/realms/pacco/protocol/openid-connect/certs}
+
+server:
+  port: 8080
+  forward-headers-strategy: framework
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+pacco:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000}
+  pricing:
+    # Курс ЦБ и валютный буфер. В рабочей системе курс обновляется задачей по расписанию.
+    rub-per-eur: ${RUB_PER_EUR:113.3}
+    fx-buffer: 0.015
+    # Пошлина ЕАЭС с 01.07.2026: до 200 € на посылку — 0, выше — 5 % со всей суммы, не менее 1 € за кг.
+    duty-free-eur-cents: 20000
+    duty-rate: 0.05
+    duty-min-eur-per-kg: 1.0
+    # Сценарий НДС 22 % и сбора 100 ₽ на зарубежные посылки (пока не принят).
+    vat-rate: 0.22
+    vat-enabled: ${VAT_ENABLED:false}
+    parcel-fee-rub: 100
+    packaging-grams: 200
+    # Тариф = себестоимость + 25 % (бизнес-план, раздел «Тариф доставки и состав посылок»).
+    ground:
+      per-parcel-eur: 8.1
+      per-kg-eur: 5.6
+    air:
+      per-parcel-eur: 8.1
+      per-kg-eur: 11.3

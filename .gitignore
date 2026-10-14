@@ -1,0 +1,9 @@
+.env
+**/target/
+**/node_modules/
+**/.next/
+**/next-env.d.ts
+*.tsbuildinfo
+.idea/
+*.iml
+.DS_Store

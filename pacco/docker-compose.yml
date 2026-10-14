@@ -1,0 +1,113 @@
+# PACCO: бэкенд (Spring Boot), витрина (Next.js), PostgreSQL, Redis, Keycloak и Caddy (HTTPS).
+# Запуск: cp .env.example .env && docker compose up -d --build
+name: pacco
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pacco
+      POSTGRES_USER: pacco
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pacco}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pacco -d pacco"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    restart: unless-stopped
+    command: ["start", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: pacco
+      KC_DB_PASSWORD: ${DB_PASSWORD:-pacco}
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME: ${PUBLIC_URL:-http://localhost}/auth
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-change-me-now}
+    volumes:
+      - ./infra/keycloak:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    image: ${REGISTRY:-ghcr.io/lisiks-dot}/pacco-backend:${TAG:-latest}
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/pacco
+      DB_USER: pacco
+      DB_PASSWORD: ${DB_PASSWORD:-pacco}
+      REDIS_HOST: redis
+      OIDC_ISSUER: ${PUBLIC_URL:-http://localhost}/auth/realms/pacco
+      OIDC_JWKS: http://keycloak:8080/auth/realms/pacco/protocol/openid-connect/certs
+      CORS_ORIGINS: ${PUBLIC_URL:-http://localhost}
+      VAT_ENABLED: ${VAT_ENABLED:-false}
+      RUB_PER_EUR: ${RUB_PER_EUR:-113.3}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    image: ${REGISTRY:-ghcr.io/lisiks-dot}/pacco-web:${TAG:-latest}
+    build:
+      context: ./web
+      args:
+        BACKEND_URL: http://backend:8080
+    restart: unless-stopped
+    environment:
+      INTERNAL_API_URL: http://backend:8080
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - backend
+      - keycloak
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:

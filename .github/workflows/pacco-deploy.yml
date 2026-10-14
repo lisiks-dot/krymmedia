@@ -1,0 +1,53 @@
+name: PACCO · деплой на сервер
+
+# Запуск вручную: Actions → «PACCO · деплой на сервер» → Run workflow.
+# Нужны секреты репозитория: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY (приватный ключ),
+# DEPLOY_PUBLIC_URL (например https://shop.example.ru),
+# GHCR_TOKEN (PAT с правом read:packages, если пакеты приватные).
+# На сервере в /opt/pacco должен лежать файл .env (см. pacco/.env.example).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Тег образов (latest или SHA коммита)"
+        default: latest
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: SSH-ключ
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+      - name: Копирование конфигурации
+        run: |
+          rsync -az -e "ssh -i ~/.ssh/id_deploy" \
+            pacco/docker-compose.yml pacco/infra \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/pacco/"
+      - name: Обновление сервисов
+        run: |
+          ssh -i ~/.ssh/id_deploy "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" bash -s <<EOF
+          set -e
+          cd /opt/pacco
+          if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
+          fi
+          export TAG="${{ inputs.tag }}"
+          docker compose pull backend web
+          docker compose up -d --remove-orphans
+          docker image prune -f
+          EOF
+      - name: Проверка после выката
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS -o /dev/null "${{ secrets.DEPLOY_PUBLIC_URL }}/api/products"; then echo "OK"; exit 0; fi
+            sleep 10
+          done
+          echo "Сайт не ответил за 5 минут" >&2
+          exit 1

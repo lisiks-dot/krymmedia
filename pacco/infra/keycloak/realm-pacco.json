@@ -1,0 +1,48 @@
+{
+  "realm": "pacco",
+  "enabled": true,
+  "displayName": "PACCO",
+  "sslRequired": "external",
+  "accessTokenLifespan": 900,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Все разделы админки" },
+      { "name": "moderator", "description": "Продавцы и карточки" },
+      { "name": "support", "description": "Заказы и споры" },
+      { "name": "finance", "description": "Выплаты и реестры" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "pacco-admin",
+      "name": "Админка PACCO",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["*"],
+      "webOrigins": ["+"]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Администратор",
+      "lastName": "PACCO",
+      "email": "admin@pacco.local",
+      "credentials": [{ "type": "password", "value": "change-me-now", "temporary": false }],
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "support",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Поддержка",
+      "lastName": "PACCO",
+      "email": "support@pacco.local",
+      "credentials": [{ "type": "password", "value": "change-me-now", "temporary": false }],
+      "realmRoles": ["support"]
+    }
+  ]
+}

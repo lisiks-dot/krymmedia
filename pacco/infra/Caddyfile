@@ -1,0 +1,25 @@
+# SITE_ADDRESS=shop.example.ru — Caddy сам получит сертификат Let's Encrypt.
+# SITE_ADDRESS=:80 — без HTTPS, для локального запуска и проверки в CI.
+{$SITE_ADDRESS::80} {
+	encode gzip
+
+	# Метрики и health бэкенда наружу не отдаём.
+	handle /actuator/* {
+		respond 404
+	}
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+	handle /v3/api-docs* {
+		reverse_proxy backend:8080
+	}
+	handle /swagger-ui* {
+		reverse_proxy backend:8080
+	}
+	handle /auth/* {
+		reverse_proxy keycloak:8080
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
