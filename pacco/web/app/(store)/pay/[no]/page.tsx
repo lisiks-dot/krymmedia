@@ -66,7 +66,7 @@ export default function PayPage() {
         <p className="muted">Откроется защищённая страница банка. Данные карты вводятся там — ilpacco их не видит и не хранит.</p>
       ) : (
         <div className="sbp">
-          <div className="qr" aria-hidden="true">{Array.from({ length: 49 }, (_, i) => <i key={i} className={(i * 7 + i * i) % 3 === 0 ? "on" : ""} />)}</div>
+          <div className="qr-slot">Здесь будет QR-код банка</div>
           <p className="muted">Отсканируйте QR-код камерой телефона или в приложении банка и подтвердите платёж.</p>
         </div>
       )}

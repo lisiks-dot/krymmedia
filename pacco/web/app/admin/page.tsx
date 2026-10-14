@@ -63,8 +63,8 @@ export default function AdminHome() {
   return (
     <>
       <div className="page-head">
-        <h1>Добрый день, {username}</h1>
-        <p className="muted">Сводка по разделам, доступным вашей роли.</p>
+        <h1>Сводка</h1>
+        <p className="muted">{username}: разделы, доступные вашей роли.</p>
       </div>
       {groups.length === 0 ? <div className="skel" style={{ height: 200 }} /> : groups.map((g) => (
         <section key={g.title} className="stack">

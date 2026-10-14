@@ -64,3 +64,19 @@ body, .pf-v5-c-login, .login-pf body {
   #kc-header-wrapper, .pf-v5-c-brand { color: #eceef2 !important; }
   .ilp-logo span { color: #6aa6ff; }
 }
+
+/* PatternFly задаёт цвета кнопки на самом элементе — переопределяем там же */
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--ilp-cta);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--ilp-cta-hover);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--ilp-cta-hover);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--ilp-cta-hover);
+  --pf-v5-c-button--m-primary--Color: var(--ilp-cta-ink);
+  --pf-v5-c-button--m-primary--hover--Color: var(--ilp-cta-ink);
+  --pf-v5-c-button--m-primary--focus--Color: var(--ilp-cta-ink);
+  --pf-v5-c-button--m-primary--active--Color: var(--ilp-cta-ink);
+  background-color: var(--ilp-cta);
+  color: var(--ilp-cta-ink);
+  font-weight: 600;
+}
+.pf-v5-c-button.pf-m-primary:hover { background-color: var(--ilp-cta-hover); }

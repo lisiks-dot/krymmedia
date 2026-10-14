@@ -4,6 +4,8 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.List;
@@ -34,6 +36,7 @@ public class OrderOperations {
     private static final Logger log = LoggerFactory.getLogger(OrderOperations.class);
     private static final ZoneId MOSCOW = ZoneId.of("Europe/Moscow");
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMMM", Locale.forLanguageTag("ru"));
 
     /** Очереди рабочих мест. */
     public static final Map<String, Set<OrderStatus>> QUEUES = Map.of(
@@ -142,7 +145,7 @@ public class OrderOperations {
         PurchaseOrder o = require(number, OrderStatus.RELEASED);
         LocalDate until = LocalDate.now(MOSCOW).plusDays(props.storageDays());
         o.arrived(String.format("%06d", RANDOM.nextInt(1_000_000)), until);
-        o.moveTo(OrderStatus.AT_PICKUP_POINT, "Ждёт в пункте выдачи", o.getPickupPoint() + ". Хранится до " + until, "pickup", Instant.now());
+        o.moveTo(OrderStatus.AT_PICKUP_POINT, "Ждёт в пункте выдачи", o.getPickupPoint() + ". Хранится до " + DAY.format(until), "pickup", Instant.now());
         return views.view(o, Audience.STAFF);
     }
 
@@ -156,7 +159,7 @@ public class OrderOperations {
         Instant now = Instant.now();
         o.received(now);
         o.moveTo(OrderStatus.RECEIVED, "Получен",
-                "Если с товаром что-то не так, откройте спор до " + views.disputeUntil(o).atZone(MOSCOW).toLocalDate(), "pickup", now);
+                "Если с товаром что-то не так, откройте спор до " + DAY.format(views.disputeUntil(o).atZone(MOSCOW)), "pickup", now);
         return views.view(o, Audience.STAFF);
     }
 
