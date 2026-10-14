@@ -50,6 +50,13 @@ springdoc:
     path: /swagger-ui.html
 
 pacco:
+  commission:
+    rates:
+      CLOTHES: 0.18
+      SHOES: 0.18
+      BEAUTY: 0.15
+      HOME: 0.12
+      FOOD: 0.12
   cors:
     allowed-origins: ${CORS_ORIGINS:http://localhost:3000}
   pricing:

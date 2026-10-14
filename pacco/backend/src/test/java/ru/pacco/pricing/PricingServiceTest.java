@@ -77,6 +77,6 @@ class PricingServiceTest {
     }
 
     private static ProductSnapshot product(long id, Category c, long cents, int grams) {
-        return new ProductSnapshot(id, "p" + id, "seller", c, "00000000", cents, grams, List.of());
+        return new ProductSnapshot(id, "p" + id, "seller", c, "00000000", cents, grams, List.of(), null);
     }
 }

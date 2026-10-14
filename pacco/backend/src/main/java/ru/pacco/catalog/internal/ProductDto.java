@@ -18,11 +18,12 @@ public record ProductDto(
         List<String> sizes,
         String description,
         ProductStatus status,
-        String blockReason) {
+        String blockReason,
+        Long sellerId) {
 
     static ProductDto of(Product p, long priceRub) {
         return new ProductDto(p.getId(), p.getTitle(), p.getSellerName(), p.getRegion(), p.getCategory(),
                 p.getHsCode(), p.getPriceEurCents(), priceRub, p.getWeightGrams(), p.sizeList(),
-                p.getDescription(), p.getStatus(), p.getBlockReason());
+                p.getDescription(), p.getStatus(), p.getBlockReason(), p.getSellerId());
     }
 }

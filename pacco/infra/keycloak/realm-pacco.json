@@ -6,10 +6,22 @@
   "accessTokenLifespan": 900,
   "roles": {
     "realm": [
-      { "name": "admin", "description": "Все разделы админки" },
-      { "name": "moderator", "description": "Продавцы и карточки" },
-      { "name": "support", "description": "Заказы и споры" },
-      { "name": "finance", "description": "Выплаты и реестры" }
+      {
+        "name": "admin",
+        "description": "Все разделы админки"
+      },
+      {
+        "name": "moderator",
+        "description": "Продавцы и карточки"
+      },
+      {
+        "name": "support",
+        "description": "Заказы и споры"
+      },
+      {
+        "name": "finance",
+        "description": "Выплаты и реестры"
+      }
     ]
   },
   "clients": [
@@ -19,8 +31,29 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["*"],
-      "webOrigins": ["+"]
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "+"
+      ]
+    },
+    {
+      "clientId": "pacco-web",
+      "name": "Витрина, админка и кабинет продавца",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "*"
+      }
     }
   ],
   "users": [
@@ -31,8 +64,16 @@
       "firstName": "Администратор",
       "lastName": "PACCO",
       "email": "admin@pacco.local",
-      "credentials": [{ "type": "password", "value": "change-me-now", "temporary": false }],
-      "realmRoles": ["admin"]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "change-me-now",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ]
     },
     {
       "username": "support",
@@ -41,8 +82,59 @@
       "firstName": "Поддержка",
       "lastName": "PACCO",
       "email": "support@pacco.local",
-      "credentials": [{ "type": "password", "value": "change-me-now", "temporary": false }],
-      "realmRoles": ["support"]
+      "credentials": [
+        {
+          "type": "password",
+          "value": "change-me-now",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "support"
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "username": "seller",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Marco",
+      "lastName": "Verdi",
+      "email": "seller@calzoleriaverdi.example",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "change-me-now",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "moderator",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Модератор",
+      "lastName": "PACCO",
+      "email": "moderator@pacco.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "change-me-now",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "moderator"
+      ]
     }
-  ]
+  ],
+  "registrationAllowed": true,
+  "loginWithEmailAllowed": true,
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "ru",
+    "it",
+    "en"
+  ],
+  "defaultLocale": "ru"
 }

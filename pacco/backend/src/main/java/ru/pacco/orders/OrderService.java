@@ -63,7 +63,7 @@ public class OrderService {
                 "**** ***" + passport.substring(passport.length() - 3), req.pickupPoint().trim(),
                 quote.goodsRub(), quote.deliveryRub(), quote.dutyRub(), quote.vatRub(), quote.totalRub(),
                 lines.stream().map(l -> new OrderLine(l.product().id(), l.product().title(), l.product().sellerName(),
-                        l.product().category(), l.size(), l.qty(), l.product().priceEurCents())).toList());
+                        l.product().category(), l.size(), l.qty(), l.product().priceEurCents(), l.product().sellerId())).toList());
         orders.save(order);
         carts.clear(req.cartId());
         return view(order);

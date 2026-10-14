@@ -36,7 +36,16 @@ class CatalogComplianceListener {
         int blocked = 0;
         int restored = 0;
         for (Product p : products.findAll()) {
+            if (p.getStatus() == ProductStatus.REJECTED) {
+                continue;
+            }
             List<Violation> v = compliance.check(p.toItemSpec());
+            if (p.getStatus() == ProductStatus.PENDING) {
+                if (!v.isEmpty()) {
+                    p.reject(v.getFirst().toString());
+                }
+                continue;
+            }
             if (!v.isEmpty() && p.getStatus() == ProductStatus.PUBLISHED) {
                 p.block(v.getFirst().toString());
                 blocked++;

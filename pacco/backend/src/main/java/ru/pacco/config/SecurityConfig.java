@@ -41,7 +41,9 @@ class SecurityConfig {
                 .requestMatchers("/api/admin/compliance/**").hasRole("admin")
                 .requestMatchers("/api/admin/products/**").hasAnyRole("admin", "moderator")
                 .requestMatchers("/api/admin/orders/**").hasAnyRole("admin", "support")
+                .requestMatchers("/api/admin/sellers/**").hasAnyRole("admin", "moderator")
                 .requestMatchers("/api/admin/**").hasRole("admin")
+                .requestMatchers("/api/seller/**").authenticated()
                 .requestMatchers("/api/**").permitAll()
                 .anyRequest().denyAll())
             .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(keycloakRoles())));

@@ -11,7 +11,8 @@ public record ProductSnapshot(
         String hsCode,
         long priceEurCents,
         int weightGrams,
-        List<String> sizes) {
+        List<String> sizes,
+        Long sellerId) {
 
     public ProductSnapshot {
         sizes = sizes == null ? List.of() : List.copyOf(sizes);

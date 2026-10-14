@@ -64,6 +64,10 @@ public class Product {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    /** Владелец карточки; null — товар загружен оператором площадки. */
+    @Column(name = "seller_id")
+    private Long sellerId;
+
     protected Product() {
     }
 
@@ -83,12 +87,32 @@ public class Product {
         this.createdAt = Instant.now();
     }
 
+    /** Карточка продавца: уходит на модерацию. */
+    public static Product bySeller(long sellerId, String sellerName, String title, String region, Category category,
+                                   String hsCode, long priceEurCents, int weightGrams, List<String> sizes,
+                                   String description, boolean aerosol) {
+        Product p = new Product(sellerName, title, region, category, hsCode, priceEurCents, weightGrams, sizes,
+                description, aerosol);
+        p.sellerId = sellerId;
+        p.status = ProductStatus.PENDING;
+        return p;
+    }
+
+    public void reject(String reason) {
+        this.status = ProductStatus.REJECTED;
+        this.blockReason = reason;
+    }
+
+    public void changePrice(long priceEurCents) {
+        this.priceEurCents = priceEurCents;
+    }
+
     public ItemSpec toItemSpec() {
         return new ItemSpec(category, hsCode, priceEurCents, aerosol);
     }
 
     public ProductSnapshot toSnapshot() {
-        return new ProductSnapshot(id, title, sellerName, category, hsCode, priceEurCents, weightGrams, sizeList());
+        return new ProductSnapshot(id, title, sellerName, category, hsCode, priceEurCents, weightGrams, sizeList(), sellerId);
     }
 
     public List<String> sizeList() {
@@ -120,4 +144,5 @@ public class Product {
     public boolean isAerosol() { return aerosol; }
     public ProductStatus getStatus() { return status; }
     public String getBlockReason() { return blockReason; }
+    public Long getSellerId() { return sellerId; }
 }

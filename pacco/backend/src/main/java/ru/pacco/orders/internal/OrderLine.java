@@ -32,7 +32,21 @@ public class OrderLine {
     @Column(name = "price_eur_cents", nullable = false)
     private long priceEurCents;
 
+    /** Продавец строки; null — товар оператора площадки, подтверждения не требует. */
+    @Column(name = "seller_id")
+    private Long sellerId;
+
+    @Column(nullable = false)
+    private boolean confirmed;
+
     protected OrderLine() {
+    }
+
+    public OrderLine(long productId, String title, String sellerName, Category category, String size, int qty,
+                     long priceEurCents, Long sellerId) {
+        this(productId, title, sellerName, category, size, qty, priceEurCents);
+        this.sellerId = sellerId;
+        this.confirmed = sellerId == null;
     }
 
     public OrderLine(long productId, String title, String sellerName, Category category, String size, int qty,
@@ -53,4 +67,7 @@ public class OrderLine {
     public String getSize() { return size; }
     public int getQty() { return qty; }
     public long getPriceEurCents() { return priceEurCents; }
+    public Long getSellerId() { return sellerId; }
+    public boolean isConfirmed() { return confirmed; }
+    public void confirm() { this.confirmed = true; }
 }
