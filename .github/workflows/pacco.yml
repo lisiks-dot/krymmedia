@@ -3,8 +3,6 @@ name: ilpacco
 on:
   push:
     branches: ["**"]
-    # Тег ilpacco-vX.Y.Z — релиз: образы с номером версии и архив исходников на странице Releases.
-    tags: ["ilpacco-v*"]
     paths:
       - "pacco/**"
       - ".github/workflows/pacco.yml"
@@ -141,15 +139,17 @@ jobs:
   images:
     name: Образы в GitHub Container Registry
     needs: smoke
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/ilpacco-v'))
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v5
-      - name: Имя реестра в нижнем регистре
-        run: echo "REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+      - name: Имя реестра и версия
+        run: |
+          echo "REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+          echo "RELEASE=ilpacco-v$(cat pacco/VERSION)" >> "$GITHUB_ENV"
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -163,7 +163,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/pacco-backend:latest
             ${{ env.REGISTRY }}/pacco-backend:${{ github.sha }}
-            ${{ env.REGISTRY }}/pacco-backend:${{ github.ref_type == 'tag' && github.ref_name || 'main' }}
+            ${{ env.REGISTRY }}/pacco-backend:${{ env.RELEASE }}
       - uses: docker/build-push-action@v6
         with:
           context: pacco/web
@@ -172,34 +172,44 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/pacco-web:latest
             ${{ env.REGISTRY }}/pacco-web:${{ github.sha }}
-            ${{ env.REGISTRY }}/pacco-web:${{ github.ref_type == 'tag' && github.ref_name || 'main' }}
+            ${{ env.REGISTRY }}/pacco-web:${{ env.RELEASE }}
 
   release:
     name: Релиз — архив и страница Releases
     needs: images
-    if: startsWith(github.ref, 'refs/tags/ilpacco-v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # Версия — в pacco/VERSION. Новый номер на main → тег ilpacco-vX.Y.Z, релиз с архивом; тот же номер — пропуск.
     steps:
       - uses: actions/checkout@v5
+      - name: Версия и проверка, что релиза ещё нет
+        id: v
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="ilpacco-v$(cat pacco/VERSION)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if gh release view "$tag" >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
       - name: Архив проекта
+        if: steps.v.outputs.exists == 'false'
         run: |
-          git archive --format=zip --prefix=ilpacco/ -o "${GITHUB_REF_NAME}.zip" HEAD pacco
-          git archive --format=tar.gz --prefix=ilpacco/ -o "${GITHUB_REF_NAME}.tar.gz" HEAD pacco
-      - name: Описание релиза
-        run: |
+          git archive --format=zip --prefix=ilpacco/ -o "${{ steps.v.outputs.tag }}.zip" HEAD pacco
+          git archive --format=tar.gz --prefix=ilpacco/ -o "${{ steps.v.outputs.tag }}.tar.gz" HEAD pacco
           {
-            echo "Образы: \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/pacco-backend:${GITHUB_REF_NAME}\`, \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/pacco-web:${GITHUB_REF_NAME}\`"
+            echo "Образы: \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/pacco-backend:${{ steps.v.outputs.tag }}\`, \`ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/pacco-web:${{ steps.v.outputs.tag }}\`"
             echo
-            echo "Запуск: распакуйте архив, \`cd ilpacco/pacco && cp .env.example .env\`, затем \`TAG=${GITHUB_REF_NAME} docker compose up -d --no-build\` или \`docker compose up -d --build\`."
+            echo "Запуск: распакуйте архив, \`cd ilpacco/pacco && cp .env.example .env\`, затем \`TAG=${{ steps.v.outputs.tag }} docker compose up -d --no-build\` или \`docker compose up -d --build\`."
             echo
             awk '/^## /{n++} n==1' pacco/CHANGELOG.md
           } > notes.md
       - uses: softprops/action-gh-release@v2
+        if: steps.v.outputs.exists == 'false'
         with:
-          name: ilpacco ${{ github.ref_name }}
+          tag_name: ${{ steps.v.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ilpacco ${{ steps.v.outputs.tag }}
           body_path: notes.md
           files: |
-            ${{ github.ref_name }}.zip
-            ${{ github.ref_name }}.tar.gz
+            ${{ steps.v.outputs.tag }}.zip
+            ${{ steps.v.outputs.tag }}.tar.gz

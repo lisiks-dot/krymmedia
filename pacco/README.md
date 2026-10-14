@@ -71,7 +71,7 @@ docker compose up -d --build
 Или без сборки — готовые образы последнего релиза:
 
 ```bash
-TAG=ilpacco-v0.3.0 docker compose pull backend web && TAG=ilpacco-v0.3.0 docker compose up -d --no-build
+TAG=ilpacco-v$(cat VERSION) docker compose pull backend web && TAG=ilpacco-v$(cat VERSION) docker compose up -d --no-build
 ```
 
 Разработка по частям:
