@@ -128,7 +128,7 @@ made=$(api_post "$finance" "/api/admin/payouts/batches" | jq '[.[] | select(.sel
 
 step "Уведомления: письмо в Mailpit и журнал СМС"
 for i in $(seq 1 24); do
-  mails=$(curl -fsS "http://127.0.0.1:8025/api/v1/messages?limit=200" | jq --arg n "$number" '[.messages[] | select(.Subject | contains($n))] | length')
+  mails=$(curl -fsS "${MAILPIT:-http://127.0.0.1:8025}/api/v1/messages?limit=200" | jq --arg n "$number" '[.messages[] | select(.Subject | contains($n))] | length')
   (( mails >= 4 )) && break
   sleep 5
 done

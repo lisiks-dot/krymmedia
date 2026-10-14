@@ -53,7 +53,21 @@
 alm, пароль у всех `change-me-now`:
 `admin` (администратор), `moderator`, `support`, `seller` (продавец Calzoleria Verdi).
 
-## Локальный запуск
+## Запуск на своём компьютере — http://127.0.0.1:8025
+
+Нужен Docker Desktop (Windows, macOS) или Docker Engine с Compose v2. Распакуйте релиз и выполните в папке `pacco`:
+
+```bash
+./start-local.sh            # macOS, Linux
+.\start-local.ps1           # Windows PowerShell
+```
+
+Скрипт собирает и запускает весь стек с профилем `local.env`: сайт — http://127.0.0.1:8025, письма (Mailpit) —
+http://127.0.0.1:8026, базы — на портах 15432 и 16379, чтобы не мешать установленным. Первая сборка — 5–10 минут,
+дальше старт за минуту. `--pull` / `-Pull` — взять готовые образы из GHCR, `--stop` / `-Stop` — остановить.
+CI проверяет именно этот профиль.
+
+## Локальный запуск (порт 80)
 
 Нужен Docker с Compose v2.
 

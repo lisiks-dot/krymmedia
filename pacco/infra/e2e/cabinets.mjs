@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 const BASE = process.env.BASE ?? "http://localhost";
 const PASSWORD = process.env.PASSWORD ?? "change-me-now";
 const OUT = process.env.OUT ?? "e2e-screens";
+const MAILPIT = process.env.MAILPIT ?? "http://127.0.0.1:8025";
 // Заказы в разных статусах, которые подготовил infra/smoke.sh: [в ПВЗ, ключ, ждёт продавца, едет на хаб]
 const [atPickup, , paid, toHub] = (await import("node:fs")).readFileSync(process.env.ORDERS_FILE ?? "/tmp/ilpacco-orders", "utf8").trim().split("\n");
 
@@ -132,11 +133,11 @@ try {
   await seller.screenshot({ path: `${OUT}/sell-landing.png`, fullPage: true });
 
   console.log("Письмо покупателю в Mailpit");
-  const box = await (await fetch("http://127.0.0.1:8025/api/v1/messages?limit=100")).json();
+  const box = await (await fetch(`${MAILPIT}/api/v1/messages?limit=100`)).json();
   const mail = box.messages.find((m) => m.Subject.includes(atPickup) && m.Subject.includes("можно забирать"));
   if (!mail) throw new Error("Нет письма «можно забирать» по заказу " + atPickup);
   const mailPage = await (await browser.newContext({ viewport: { width: 640, height: 900 } })).newPage();
-  await mailPage.goto(`http://127.0.0.1:8025/view/${mail.ID}.html`);
+  await mailPage.goto(`${MAILPIT}/view/${mail.ID}.html`);
   await expectText(mailPage, "Код получения", "письмо с кодом");
   await mailPage.screenshot({ path: `${OUT}/mail-pickup.png`, fullPage: true });
 

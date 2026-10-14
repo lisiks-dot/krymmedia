@@ -93,26 +93,27 @@ jobs:
     defaults:
       run:
         working-directory: pacco
+    # Тот же профиль, что у локального запуска (local.env): сайт на http://127.0.0.1:8025, Mailpit на 8026.
     env:
-      PUBLIC_URL: http://localhost
-      SITE_ADDRESS: ":80"
       REGISTRY: local
       TAG: ci
+      BASE: http://127.0.0.1:8025
+      MAILPIT: http://127.0.0.1:8026
     steps:
       - uses: actions/checkout@v5
       - name: Сборка и запуск всего стека
-        run: docker compose up -d --build
+        run: docker compose --env-file local.env up -d --build
       - name: Сквозная проверка через Caddy
-        run: BASE=http://localhost ADMIN_PASSWORD=change-me-now STATE_FILE=/tmp/ilpacco-orders infra/smoke.sh
+        run: ADMIN_PASSWORD=change-me-now STATE_FILE=/tmp/ilpacco-orders infra/smoke.sh
       - name: Браузер — вход через Keycloak в админку и кабинет продавца
         run: |
           mkdir -p /tmp/e2e e2e-screens
           npm install --prefix /tmp/e2e --no-audit --no-fund playwright@1
           /tmp/e2e/node_modules/.bin/playwright install --with-deps chromium
           cp infra/e2e/*.mjs /tmp/e2e/
-          BASE=http://localhost PASSWORD=change-me-now OUT=$PWD/e2e-screens ORDERS_FILE=/tmp/ilpacco-orders node /tmp/e2e/cabinets.mjs
+          PASSWORD=change-me-now OUT=$PWD/e2e-screens ORDERS_FILE=/tmp/ilpacco-orders node /tmp/e2e/cabinets.mjs
       - name: Браузер — витрина на компьютере и телефоне
-        run: BASE=http://localhost OUT=$PWD/e2e-screens ORDERS_FILE=/tmp/ilpacco-orders node /tmp/e2e/storefront.mjs
+        run: OUT=$PWD/e2e-screens ORDERS_FILE=/tmp/ilpacco-orders node /tmp/e2e/storefront.mjs
       - name: Скриншоты — в ветку ci-screenshots
         if: always() && github.event_name == 'push'
         run: |
@@ -131,10 +132,10 @@ jobs:
           if-no-files-found: ignore
       - name: Логи сервисов
         if: failure()
-        run: docker compose logs --no-color --tail 300
+        run: docker compose --env-file local.env logs --no-color --tail 300
       - name: Остановка
         if: always()
-        run: docker compose down -v
+        run: docker compose --env-file local.env down -v
 
   images:
     name: Образы в GitHub Container Registry
