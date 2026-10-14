@@ -6,9 +6,9 @@ const BASE = process.env.BASE ?? "http://localhost";
 const OUT = process.env.OUT ?? "e2e-screens";
 const [atPickup, pickupKey] = (await import("node:fs")).readFileSync(process.env.ORDERS_FILE ?? "/tmp/ilpacco-orders", "utf8").trim().split("\n");
 
-async function expectText(page, text, what) {
+async function expectText(page, text, what, timeout = 30_000) {
   try {
-    await page.getByText(text, { exact: false }).first().waitFor({ timeout: 30_000 });
+    await page.getByText(text, { exact: false }).first().waitFor({ timeout });
     console.log(`  ✓ ${what}`);
   } catch {
     await page.screenshot({ path: `${OUT}/failed-${what.replace(/\s+/g, "-")}.png`, fullPage: true });
@@ -96,7 +96,7 @@ try {
       await expectText(page, "Уведомления о заказах", "профиль");
       await page.screenshot({ path: `${OUT}/store-${name}-profile.png`, fullPage: true });
       await page.goto(`${BASE}/account/notifications`);
-      await expectText(page, "оплачен", "лента уведомлений");
+      await expectText(page, "оплачен", "лента уведомлений", 70_000);
       await page.screenshot({ path: `${OUT}/store-${name}-notifications.png`, fullPage: true });
     }
 

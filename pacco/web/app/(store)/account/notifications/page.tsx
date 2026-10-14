@@ -11,7 +11,11 @@ export default function NotificationsPage() {
   const [list, setList] = useState<NotificationView[] | null>(null);
 
   useEffect(() => {
-    call<NotificationView[]>("/api/me/notifications").then(setList).catch(() => setList([]));
+    const load = () => call<NotificationView[]>("/api/me/notifications").then(setList).catch(() => setList((prev) => prev ?? []));
+    load();
+    // сообщения отправляются фоновой рассылкой — подтягиваем новые
+    const t = window.setInterval(load, 10000);
+    return () => window.clearInterval(t);
   }, [call]);
 
   if (list === null) return <div className="skel" style={{ height: 200 }} />;
