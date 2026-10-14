@@ -38,7 +38,7 @@ function Application({ previous, onDone }: { previous: Seller | null; onDone: (s
   return (
     <div className="cols">
       <form className="panel" onSubmit={submit} noValidate>
-        <h1>Vendi in Russia con PACCO</h1>
+        <h1>Vendi in Russia con ilpacco.ru</h1>
         <p className="muted" style={{ margin: 0 }}>
           Compila la richiesta: la verifichiamo entro 3 giorni lavorativi. Dopo l&apos;approvazione potrai pubblicare i prodotti.
         </p>

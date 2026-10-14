@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { ApiError, api, cartId, rememberOrder } from "@/lib/client";
+import { notifyCart } from "@/lib/local";
 import { rub } from "@/lib/format";
 import { MODE_LABEL, type CartView, type DeliveryMode, type OrderView } from "@/lib/types";
 
@@ -44,6 +45,7 @@ export default function CheckoutPage() {
         }),
       });
       rememberOrder(order.number);
+      notifyCart();
       await api<OrderView>(`/api/orders/${order.number}/pay`, { method: "POST" });
       router.push(`/orders/${order.number}`);
     } catch (err) {

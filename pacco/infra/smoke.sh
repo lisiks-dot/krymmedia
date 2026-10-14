@@ -23,8 +23,8 @@ wait_for "$BASE/api/products"
 wait_for "$BASE/auth/realms/pacco/.well-known/openid-configuration"
 
 step "Витрина отдаёт каталог с сервера"
-curl -fsS "$BASE/" | grep -q "Италия в одной посылке" || fail "главная страница без героя"
-curl -fsS "$BASE/" | grep -q "Лоферы из замши" || fail "главная страница без товаров"
+curl -fsS "$BASE/" | grep -q "Обувь и трикотаж от семейных мастерских Италии" || fail "главная страница без кампании"
+curl -fsS "$BASE/catalog" | grep -q "Лоферы из замши" || fail "каталог без товаров"
 
 step "Каталог"
 products=$(curl -fsS "$BASE/api/products")

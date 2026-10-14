@@ -1,8 +1,8 @@
-name: PACCO · деплой на сервер
+name: ilpacco · деплой на сервер
 
-# Запуск вручную: Actions → «PACCO · деплой на сервер» → Run workflow.
+# Запуск вручную: Actions → «ilpacco · деплой на сервер» → Run workflow.
 # Нужны секреты репозитория: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY (приватный ключ),
-# DEPLOY_PUBLIC_URL (например https://shop.example.ru),
+# DEPLOY_PUBLIC_URL (например https://ilpacco.ru),
 # GHCR_TOKEN (PAT с правом read:packages, если пакеты приватные).
 # На сервере в /opt/pacco должен лежать файл .env (см. pacco/.env.example).
 on:

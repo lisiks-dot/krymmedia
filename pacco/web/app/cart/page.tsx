@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { ProductArt } from "@/components/ProductArt";
 import { ApiError, api, cartId } from "@/lib/client";
+import { notifyCart } from "@/lib/local";
 import { eur, kg, rub } from "@/lib/format";
 import { MODE_LABEL, type CartView, type DeliveryMode } from "@/lib/types";
 
@@ -32,6 +34,7 @@ export default function CartPage() {
         method: "PUT",
         body: JSON.stringify({ productId, size, qty }),
       }));
+      notifyCart();
     } catch (e) {
       setError(e instanceof ApiError ? e.messages.join("; ") : "Не удалось изменить количество.");
     }
@@ -46,7 +49,7 @@ export default function CartPage() {
     return (
       <>
         <h1>Корзина</h1>
-        <div className="empty">Корзина пуста. <Link href="/" className="btn ghost" style={{ marginLeft: 8 }}>Открыть каталог</Link></div>
+        <div className="empty">В корзине пока ничего нет. Посылка до 200 € едет без пошлины.<Link href="/catalog" className="btn">Перейти в каталог</Link></div>
       </>
     );
   }
@@ -81,7 +84,7 @@ export default function CartPage() {
             ) : null}
             {cart.items.map((i) => (
               <div className="line" key={`${i.productId}-${i.size ?? ""}`}>
-                <div className="mini" style={{ background: `var(--t-${i.category})` }} />
+                <ProductArt id={i.productId} title={i.title} category={i.category} size="mini" />
                 <div style={{ minWidth: 0 }}>
                   <div>{i.title}{i.size ? `, ${i.size} IT` : ""}</div>
                   <div className="small muted num">{i.sellerName} · {rub(i.unitPriceRub)} за шт.</div>
@@ -112,7 +115,7 @@ export default function CartPage() {
           <fieldset style={{ border: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 8 }}>
             <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Способ доставки</legend>
             {(["GROUND", "AIR"] as DeliveryMode[]).map((m) => (
-              <label key={m} className="choice" htmlFor={`mode-${m}`}>
+              <label key={m} className="choice option" htmlFor={`mode-${m}`}>
                 <input type="radio" id={`mode-${m}`} name="mode" value={m} checked={mode === m} onChange={() => setMode(m)} />
                 <span>
                   {MODE_LABEL[m].name} · {MODE_LABEL[m].days}

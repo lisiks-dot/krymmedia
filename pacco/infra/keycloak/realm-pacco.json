@@ -1,7 +1,7 @@
 {
   "realm": "pacco",
   "enabled": true,
-  "displayName": "PACCO",
+  "displayName": "ilpacco.ru",
   "sslRequired": "external",
   "accessTokenLifespan": 900,
   "roles": {
@@ -27,7 +27,7 @@
   "clients": [
     {
       "clientId": "pacco-admin",
-      "name": "Админка PACCO",
+      "name": "Админка ilpacco",
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
@@ -62,7 +62,7 @@
       "enabled": true,
       "emailVerified": true,
       "firstName": "Администратор",
-      "lastName": "PACCO",
+      "lastName": "ilpacco",
       "email": "admin@pacco.local",
       "credentials": [
         {
@@ -80,7 +80,7 @@
       "enabled": true,
       "emailVerified": true,
       "firstName": "Поддержка",
-      "lastName": "PACCO",
+      "lastName": "ilpacco",
       "email": "support@pacco.local",
       "credentials": [
         {
@@ -114,7 +114,7 @@
       "enabled": true,
       "emailVerified": true,
       "firstName": "Модератор",
-      "lastName": "PACCO",
+      "lastName": "ilpacco",
       "email": "moderator@pacco.local",
       "credentials": [
         {

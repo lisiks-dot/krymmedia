@@ -1,4 +1,4 @@
-# PACCO: бэкенд (Spring Boot), витрина (Next.js), PostgreSQL, Redis, Keycloak и Caddy (HTTPS).
+# ilpacco: бэкенд (Spring Boot), витрина (Next.js), PostgreSQL, Redis, Keycloak и Caddy (HTTPS).
 # Запуск: cp .env.example .env && docker compose up -d --build
 name: pacco
 

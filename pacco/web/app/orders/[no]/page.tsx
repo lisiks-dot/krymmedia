@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ProductArt } from "@/components/ProductArt";
 import { api } from "@/lib/client";
 import { rub } from "@/lib/format";
 import { MODE_LABEL, ORDER_STEPS, type OrderView } from "@/lib/types";
@@ -52,7 +53,7 @@ export default function OrderPage() {
         <h3>Состав</h3>
         {order.items.map((i) => (
           <div className="line" key={`${i.productId}-${i.size ?? ""}`}>
-            <div className="mini" style={{ background: `var(--t-${i.category})` }} />
+            <ProductArt id={i.productId} title={i.title} category={i.category} size="mini" />
             <div style={{ minWidth: 0 }}>
               {i.title}{i.size ? `, ${i.size} IT` : ""}
               <div className="small muted">{i.sellerName}</div>

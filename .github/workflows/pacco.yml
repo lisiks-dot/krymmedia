@@ -1,4 +1,4 @@
-name: PACCO
+name: ilpacco
 
 on:
   push:
@@ -87,6 +87,8 @@ jobs:
     name: Деплой в Docker Compose и сквозная проверка
     needs: [backend, web]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: pacco
@@ -106,8 +108,19 @@ jobs:
           mkdir -p /tmp/e2e e2e-screens
           npm install --prefix /tmp/e2e --no-audit --no-fund playwright@1
           /tmp/e2e/node_modules/.bin/playwright install --with-deps chromium
-          NODE_PATH=/tmp/e2e/node_modules cp infra/e2e/cabinets.mjs /tmp/e2e/ && \
-            BASE=http://localhost PASSWORD=change-me-now OUT=$PWD/e2e-screens node /tmp/e2e/cabinets.mjs
+          cp infra/e2e/*.mjs /tmp/e2e/
+          BASE=http://localhost PASSWORD=change-me-now OUT=$PWD/e2e-screens node /tmp/e2e/cabinets.mjs
+      - name: Браузер — витрина на компьютере и телефоне
+        run: BASE=http://localhost OUT=$PWD/e2e-screens node /tmp/e2e/storefront.mjs
+      - name: Скриншоты — в ветку ci-screenshots
+        if: always() && github.event_name == 'push'
+        run: |
+          [ -d e2e-screens ] && [ "$(ls -A e2e-screens)" ] || exit 0
+          cd e2e-screens
+          git init -q -b ci-screenshots
+          git config user.name "github-actions"; git config user.email "actions@github.com"
+          git add -A && git commit -qm "Скриншоты ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-screenshots
       - name: Скриншоты кабинетов
         if: always()
         uses: actions/upload-artifact@v4

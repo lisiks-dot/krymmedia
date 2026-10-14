@@ -23,7 +23,7 @@ function Shell({ children }: { children: ReactNode }) {
   if (!staff) {
     return (
       <div className="empty">
-        У пользователя «{username}» нет прав сотрудника PACCO. Продавцам — в <Link href="/seller">кабинет продавца</Link>.{" "}
+        У пользователя «{username}» нет прав сотрудника ilpacco. Продавцам — в <Link href="/seller">кабинет продавца</Link>.{" "}
         <button className="btn ghost sm" type="button" onClick={logout}>Выйти</button>
       </div>
     );

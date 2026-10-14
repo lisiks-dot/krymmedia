@@ -1,4 +1,4 @@
-# SITE_ADDRESS=shop.example.ru — Caddy сам получит сертификат Let's Encrypt.
+# SITE_ADDRESS=ilpacco.ru — Caddy сам получит сертификат Let's Encrypt.
 # SITE_ADDRESS=:80 — без HTTPS, для локального запуска и проверки в CI.
 {$SITE_ADDRESS::80} {
 	encode gzip
