@@ -33,8 +33,7 @@ export default function NotificationsPage() {
         <li key={n.id}>
           <span className={`pill ${n.channel === "SMS" ? "brand" : "neutral"}`}>{n.channel === "SMS" ? "СМС" : "Письмо"}</span>
           <div>
-            <b>{n.subject ?? n.body.split(". ")[0]}</b>
-            <p className="muted">{n.channel === "SMS" ? n.body : n.body}</p>
+            {n.channel === "SMS" ? <p>{n.body}</p> : <><b>{n.subject}</b><p className="muted">{n.body}</p></>}
             <span className="small muted">{fmtTime(n.createdAt)} · {n.recipient}{n.status === "FAILED" ? " · не доставлено" : ""}</span>
           </div>
         </li>

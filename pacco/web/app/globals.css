@@ -613,3 +613,4 @@ table.t.compact { min-width: 0; }
 .doc .t { min-width: 0; }
 .doc-totals { display: flex; flex-direction: column; gap: 6px; margin-left: auto; width: min(100%, 360px); }
 .segmented.sm button { min-height: 34px; font-size: 13px; }
+.doc .t td.r, .doc .t th.r { white-space: nowrap; }
