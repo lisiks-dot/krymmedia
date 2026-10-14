@@ -22,7 +22,7 @@ export default async function Home() {
   const beauty = first("BEAUTY");
   const home = first("HOME");
   const newest = [...all].sort((a, b) => b.id - a.id).slice(0, 8);
-  const gifts = all.filter((p) => p.priceRub <= 5000).sort((a, b) => a.priceRub - b.priceRub).slice(0, 8);
+  const gifts = all.filter((p) => p.priceRub <= 5000 && p.category !== "FOOD").sort((a, b) => a.priceRub - b.priceRub).slice(0, 8);
   const regions = Object.entries(all.reduce<Record<string, number>>((m, p) => {
     if (p.region) m[p.region] = (m[p.region] ?? 0) + 1;
     return m;
@@ -38,7 +38,7 @@ export default async function Home() {
             <p>Цена с доставкой и пошлиной видна сразу. Каждую посылку проверяем в Милане перед отправкой.</p>
             <span className="btn">Смотреть обувь</span>
           </div>
-          {hero ? <ProductArt id={hero.id} title={hero.title} category={hero.category} size="hero" label="" /> : null}
+          {hero ? <ProductArt id={hero.id} title={hero.title} category={hero.category} size="hero" label="" palette={0} /> : null}
         </Link>
         <div className="camp-side">
           {beauty ? (

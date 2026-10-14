@@ -68,7 +68,7 @@ main.wrap { padding-block: 20px 72px; display: flex; flex-direction: column; gap
 .top-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 24px; align-items: center; padding-block: 12px; }
 .logo { font-family: var(--display); font-size: 30px; line-height: 1; text-decoration: none; letter-spacing: -.02em; display: inline-flex; align-items: baseline; gap: 2px; }
 .logo span { font-family: var(--body); font-size: 13px; color: var(--brand); font-weight: 600; letter-spacing: 0; }
-.search { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid transparent; border-radius: 999px; padding: 0 6px 0 16px; min-height: 46px; max-width: 640px; width: 100%; justify-self: center; transition: border-color .15s, background .15s; }
+.search, form.search { display: flex; flex-direction: row; align-items: center; gap: 10px; background: var(--surface); border: 1px solid transparent; border-radius: 999px; padding: 0 6px 0 16px; min-height: 46px; max-width: 640px; width: 100%; justify-self: center; transition: border-color .15s, background .15s; }
 .search:focus-within { border-color: var(--brand); background: var(--bg); }
 .search input { border: none; background: transparent; outline: none; flex: 1; min-width: 0; font-size: 15px; }
 .search button { border: none; background: var(--ink); color: var(--bg); border-radius: 999px; min-height: 36px; padding: 0 16px; font-weight: 600; }
@@ -132,9 +132,9 @@ main.wrap { padding-block: 20px 72px; display: flex; flex-direction: column; gap
 .campaign { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; }
 @media (max-width: 900px) { .campaign { grid-template-columns: minmax(0, 1fr); } }
 .camp { position: relative; border-radius: var(--r-lg); overflow: hidden; text-decoration: none; display: grid; }
-.camp-main { background: #0b2f6b; color: #fff; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); align-items: center; min-height: 420px; }
+.camp-main { background: #0b2f6b; color: #fff; grid-template-columns: minmax(0, 1.35fr) minmax(0, .85fr); align-items: center; min-height: 420px; }
 .camp-main .copy { padding: clamp(24px, 4vw, 48px); display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
-.camp-main h1 { color: #fff; font-size: clamp(32px, 4.4vw, 52px); }
+.camp-main h1 { color: #fff; font-size: clamp(30px, 3.3vw, 46px); max-width: 16ch; }
 .camp-main p { margin: 0; color: #c9d8f2; max-width: 40ch; font-size: 16px; }
 .camp-main .art { background: transparent !important; aspect-ratio: auto; height: 100%; }
 .camp-main .art svg { width: 92%; }
@@ -149,6 +149,7 @@ main.wrap { padding-block: 20px 72px; display: flex; flex-direction: column; gap
 
 .usp { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 @media (max-width: 900px) { .usp { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .usp { grid-template-columns: minmax(0, 1fr); gap: 8px; } .usp div { padding: 12px 14px; } }
 .usp div { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border-radius: var(--r-md); background: var(--surface); }
 .usp svg { width: 28px; height: 28px; flex-shrink: 0; color: var(--brand); }
 .usp b { display: block; font-size: 14px; }
@@ -173,7 +174,7 @@ main.wrap { padding-block: 20px 72px; display: flex; flex-direction: column; gap
 .region b { font-family: var(--display); font-weight: 400; font-size: 20px; }
 .region span { font-size: 13px; color: var(--muted); }
 
-.brands { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.brands { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .brands a { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 22px 16px; text-align: center; font-family: var(--display); font-size: 19px; text-decoration: none; }
 .brands a:hover { background: var(--surface); }
 

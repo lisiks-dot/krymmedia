@@ -55,11 +55,14 @@ function Shape({ kind, c }: { kind: Kind; c: (typeof PALETTES)[number] }) {
     case "loafer":
       return (
         <g>
-          <ellipse cx="100" cy="172" rx="78" ry="8" fill="#000" opacity=".08" />
-          <path d="M28 150c0-18 14-30 36-33l44-7c26-4 48 6 60 24 5 8 6 16 6 24v6H28z" fill={main} />
-          <path d="M26 162h150a6 6 0 0 1 0 12H26a6 6 0 0 1 0-12z" fill={shade} />
-          <path d="M70 118c14 16 36 16 54-6" fill="none" stroke={shade} strokeWidth="4" strokeLinecap="round" />
-          <path d="M84 122h26" stroke={detail} strokeWidth="4" strokeLinecap="round" />
+          <ellipse cx="102" cy="168" rx="80" ry="7" fill="#000" opacity=".08" />
+          {/* задник выше носка: силуэт лофера в профиль */}
+          <path d="M26 156V112c0-8 5-12 12-12 10 0 18 4 28 6l28 4c22 4 40 12 56 24 14 10 26 14 26 22z" fill={main} />
+          <path d="M34 108c16-6 40-2 58 8-20 6-42 6-58 0z" fill={shade} />
+          <path d="M98 118c18 2 36 10 50 22" fill="none" stroke={detail} strokeWidth="3" strokeLinecap="round" strokeDasharray="1 6" />
+          <rect x="96" y="120" width="26" height="7" rx="3.5" fill={detail} transform="rotate(14 109 123)" />
+          <path d="M22 154h156a6 6 0 0 1 0 12H28a6 6 0 0 1-6-6z" fill={shade} />
+          <path d="M26 154h18v12H26z" fill={shade} />
         </g>
       );
     case "boot":
@@ -200,14 +203,16 @@ function Shape({ kind, c }: { kind: Kind; c: (typeof PALETTES)[number] }) {
   }
 }
 
-export function ProductArt({ id, title, category, size = "card", label }: {
+export function ProductArt({ id, title, category, size = "card", label, palette }: {
   id: number;
   title: string;
   category: Category;
   size?: "card" | "hero" | "mini";
   label?: string;
+  /** Номер палитры вместо вычисленной по id — для тёмных фонов кампаний. */
+  palette?: number;
 }) {
-  const c = paletteOf(id);
+  const c = palette === undefined ? paletteOf(id) : PALETTES[palette % PALETTES.length];
   return (
     <div className={`art art-${size}`} style={{ background: c.bg }}>
       <svg viewBox="0 0 200 210" role="img" aria-label={label ?? title}>
