@@ -133,9 +133,9 @@ main.wrap { padding-block: 20px 72px; display: flex; flex-direction: column; gap
 .campaign { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; }
 @media (max-width: 900px) { .campaign { grid-template-columns: minmax(0, 1fr); } }
 .camp { position: relative; border-radius: var(--r-lg); overflow: hidden; text-decoration: none; display: grid; }
-.camp-main { background: #0b2f6b; color: #fff; grid-template-columns: minmax(0, 1.35fr) minmax(0, .85fr); align-items: center; min-height: 420px; }
+.camp-main { background: #0b2f6b; color: #fff; grid-template-columns: minmax(0, 1.75fr) minmax(0, .8fr); align-items: center; min-height: 400px; }
 .camp-main .copy { padding: clamp(24px, 4vw, 48px); display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
-.camp-main h1 { color: #fff; font-size: clamp(30px, 3vw, 44px); max-width: 22ch; }
+.camp-main h1 { color: #fff; font-size: clamp(30px, 2.7vw, 40px); max-width: 20ch; }
 .camp-main p { margin: 0; color: #c9d8f2; max-width: 40ch; font-size: 16px; }
 .camp-main .art { background: transparent !important; aspect-ratio: auto; height: 100%; }
 .camp-main .art svg { width: 92%; }
