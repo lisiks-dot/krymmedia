@@ -21,7 +21,12 @@ export default async function Home() {
   const hero = first("SHOES") ?? all[0];
   const beauty = first("BEAUTY");
   const home = first("HOME");
-  const newest = [...all].sort((a, b) => b.id - a.id).slice(0, 8);
+  // Новинки по очереди из каждой категории, чтобы полка не состояла из одной гастрономии
+  const byCat = new Map<string, typeof all>();
+  for (const p of [...all].sort((a, b) => b.id - a.id)) byCat.set(p.category, [...(byCat.get(p.category) ?? []), p]);
+  const newest: typeof all = [];
+  for (let i = 0; newest.length < Math.min(8, all.length); i++)
+    for (const list of byCat.values()) if (list[i] && newest.length < 8) newest.push(list[i]);
   const gifts = all.filter((p) => p.priceRub <= 5000 && p.category !== "FOOD").sort((a, b) => a.priceRub - b.priceRub).slice(0, 8);
   const regions = Object.entries(all.reduce<Record<string, number>>((m, p) => {
     if (p.region) m[p.region] = (m[p.region] ?? 0) + 1;
