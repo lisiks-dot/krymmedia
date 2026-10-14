@@ -138,7 +138,10 @@ step "Страницы отдаются"
 for path in /admin /seller /sell /legal "/orders/$number" "/pay/$n4"; do
   curl -fsS -o /dev/null "$BASE$path" || fail "$path недоступна"
 done
-curl -fsS "$BASE/auth/realms/pacco/protocol/openid-connect/auth?client_id=pacco-web&response_type=code&redirect_uri=$BASE/admin&scope=openid" \
-  | grep -q "ilpacco.css" || fail "страница входа без темы ilpacco"
+login_page=$(curl -sS "$BASE/auth/realms/pacco/protocol/openid-connect/auth?client_id=pacco-web&response_type=code&scope=openid&redirect_uri=$BASE/admin&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256")
+if ! grep -q "ilpacco.css" <<<"$login_page"; then
+  css=$(grep -o 'href="[^"]*\.css"' <<<"$login_page" | tr '\n' ' ')
+  fail "страница входа без темы ilpacco; стили: ${css:-нет} ; заголовок: $(grep -o '<title>[^<]*' <<<"$login_page")"
+fi
 
 printf '\nOK: заказ %s прошёл весь путь до выдачи, спора и завершения; для кабинетов созданы %s, %s, %s\n' "$number" "$n2" "$n3" "$n4"
