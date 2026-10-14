@@ -50,14 +50,32 @@ step "Админка без токена закрыта"
 code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$BASE/api/admin/orders/$number/advance")
 [[ "$code" == "401" ]] || fail "без токена ответ $code, ожидали 401"
 
+token_for() {
+  curl -fsS -d grant_type=password -d client_id=pacco-web -d "username=$1" -d "password=$ADMIN_PASSWORD" \
+    "$BASE/auth/realms/pacco/protocol/openid-connect/token" | jq -r .access_token
+}
+
+step "Кабинет продавца: товары и подтверждение заказа"
+seller=$(token_for seller)
+[[ -n "$seller" && "$seller" != "null" ]] || fail "Keycloak не выдал токен продавцу"
+mine=$(curl -fsS -H "Authorization: Bearer $seller" "$BASE/api/seller/products" | jq length)
+(( mine >= 2 )) || fail "у демо-продавца $mine товаров"
+status=$(curl -fsS -X POST -H "Authorization: Bearer $seller" "$BASE/api/seller/orders/$number/confirm" | jq -r .status)
+[[ "$status" == "CONFIRMED" ]] || fail "после подтверждения продавцом статус $status"
+
 step "Админка с токеном Keycloak"
-token=$(curl -fsS -d grant_type=password -d client_id=pacco-admin -d username=admin -d "password=$ADMIN_PASSWORD" \
-  "$BASE/auth/realms/pacco/protocol/openid-connect/token" | jq -r .access_token)
+token=$(token_for admin)
 [[ -n "$token" && "$token" != "null" ]] || fail "Keycloak не выдал токен"
 status=$(curl -fsS -X POST -H "Authorization: Bearer $token" "$BASE/api/admin/orders/$number/advance" | jq -r .status)
-[[ "$status" == "CONFIRMED" ]] || fail "после продвижения статус $status"
+[[ "$status" == "TO_HUB" ]] || fail "после продвижения статус $status"
+code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $seller" "$BASE/api/admin/orders")
+[[ "$code" == "403" ]] || fail "продавец получил доступ к админке: $code"
+
+step "Страницы кабинетов отдаются"
+curl -fsS -o /dev/null "$BASE/admin" || fail "/admin недоступна"
+curl -fsS -o /dev/null "$BASE/seller" || fail "/seller недоступна"
 
 step "Трекинг на витрине"
 curl -fsS -o /dev/null "$BASE/orders/$number" || fail "страница заказа недоступна"
 
-printf '\nOK: заказ %s прошёл путь от каталога до подтверждения продавцом\n' "$number"
+printf '\nOK: заказ %s прошёл путь от каталога до подтверждения продавцом и передачи на хаб\n' "$number"

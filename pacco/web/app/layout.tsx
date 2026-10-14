@@ -27,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/">Каталог</Link>
               <Link href="/cart">Корзина</Link>
               <Link href="/orders">Заказы</Link>
+              <Link href="/seller">Продавцам</Link>
             </nav>
           </div>
         </header>
