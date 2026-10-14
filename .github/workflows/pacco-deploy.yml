@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: SSH-ключ
         run: |
           install -m 700 -d ~/.ssh

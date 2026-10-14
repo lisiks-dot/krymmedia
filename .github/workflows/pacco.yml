@@ -38,13 +38,22 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "25"
           cache: maven
-      - run: mvn -B -ntp verify
+      - name: Сборка и тесты
+        run: |
+          set -o pipefail
+          mvn -B -ntp verify 2>&1 | tee build.log
+      - name: Ошибки сборки — в аннотации
+        if: failure()
+        run: |
+          grep -E '^\[ERROR\]|Caused by|Exception:|expected|but was' build.log \
+            | grep -vE '^\[ERROR\] *$|^\[ERROR\] (To see|Re-run|For more|-> \[Help|After correcting)' \
+            | head -45 | while IFS= read -r l; do l="${l//'%'/%25}"; echo "::error::${l:0:900}"; done
       - name: Отчёты тестов
         if: always()
         uses: actions/upload-artifact@v4
@@ -62,8 +71,8 @@ jobs:
       run:
         working-directory: pacco/web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
       - run: npm install --no-audit --no-fund
@@ -87,7 +96,7 @@ jobs:
       REGISTRY: local
       TAG: ci
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Сборка и запуск всего стека
         run: docker compose up -d --build
       - name: Сквозная проверка через Caddy
@@ -108,7 +117,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Имя реестра в нижнем регистре
         run: echo "REGISTRY=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
       - uses: docker/setup-buildx-action@v3
