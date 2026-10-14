@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 # Проверка развёрнутого стека через Caddy: витрина, каталог, корзина, заказ, оплата, админка с токеном Keycloak.
 # Использование: BASE=http://localhost ADMIN_PASSWORD=change-me-now infra/smoke.sh
-set -euo pipefail
+set -Eeuo pipefail
 
 BASE="${BASE:-http://localhost}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-change-me-now}"
 TIMEOUT="${TIMEOUT:-420}"
 
 step() { printf '\n== %s\n' "$*"; }
-fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
+fail() { printf 'FAIL: %s\n' "$*" >&2; [[ -n "${GITHUB_ACTIONS:-}" ]] && echo "::error::smoke: $*"; exit 1; }
+# Любая упавшая команда (например, curl -f с ответом 4xx) — аннотация с номером строки и командой.
+trap 'rc=$?; [[ -n "${GITHUB_ACTIONS:-}" ]] && echo "::error::smoke: строка $LINENO, код $rc: $BASH_COMMAND"' ERR
 
 wait_for() {
   local url="$1" deadline=$((SECONDS + TIMEOUT))
