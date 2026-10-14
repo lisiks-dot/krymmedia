@@ -1,24 +1,10 @@
 "use client";
 
-import type Keycloak from "keycloak-js";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "./client";
+import { session } from "./session";
 
-/** Вход через Keycloak (realm pacco, клиент pacco-web, PKCE). Один экземпляр на вкладку. */
-let kcPromise: Promise<{ kc: Keycloak; authenticated: boolean }> | null = null;
-
-function keycloak() {
-  if (!kcPromise) {
-    kcPromise = (async () => {
-      const { default: KeycloakCtor } = await import("keycloak-js");
-      const kc = new KeycloakCtor({ url: `${window.location.origin}/auth`, realm: "pacco", clientId: "pacco-web" });
-      const authenticated = await kc.init({ onLoad: "login-required", pkceMethod: "S256", checkLoginIframe: false });
-      return { kc, authenticated };
-    })();
-  }
-  return kcPromise;
-}
-
+/** Кабинеты: требуют входа. Сессия общая с витриной (lib/session.ts). */
 type AuthState = {
   ready: boolean;
   error: string | null;
@@ -30,6 +16,8 @@ type AuthState = {
 type Auth = AuthState & {
   has: (...roles: string[]) => boolean;
   call: <T>(path: string, init?: RequestInit) => Promise<T>;
+  /** Заголовок Authorization для загрузки файлов и картинок. */
+  bearer: () => Promise<Record<string, string>>;
   logout: () => void;
 };
 
@@ -40,9 +28,13 @@ export function AuthProvider({ children, locale = "ru" }: { children: ReactNode;
 
   useEffect(() => {
     let alive = true;
-    keycloak()
-      .then(({ kc }) => {
+    session()
+      .then(({ kc, authenticated }) => {
         if (!alive) return;
+        if (!authenticated) {
+          void kc.login({ locale });
+          return;
+        }
         const t = (kc.tokenParsed ?? {}) as { preferred_username?: string; sub?: string; realm_access?: { roles?: string[] } };
         setState({ ready: true, error: null, username: t.preferred_username ?? "", sub: t.sub ?? "", roles: t.realm_access?.roles ?? [] });
       })
@@ -61,13 +53,19 @@ export function AuthProvider({ children, locale = "ru" }: { children: ReactNode;
   }, [locale]);
 
   const call = useCallback(async <T,>(path: string, init?: RequestInit): Promise<T> => {
-    const { kc } = await keycloak();
+    const { kc } = await session();
     await kc.updateToken(30);
     return api<T>(path, { ...init, headers: { ...(init?.headers ?? {}), Authorization: `Bearer ${kc.token}` } });
   }, []);
 
+  const bearer = useCallback(async (): Promise<Record<string, string>> => {
+    const { kc } = await session();
+    await kc.updateToken(30);
+    return { Authorization: `Bearer ${kc.token}` };
+  }, []);
+
   const logout = useCallback(() => {
-    void keycloak().then(({ kc }) => kc.logout({ redirectUri: window.location.origin }));
+    void session().then(({ kc }) => kc.logout({ redirectUri: window.location.origin }));
   }, []);
 
   const has = useCallback((...roles: string[]) => roles.some((r) => state.roles.includes(r)), [state.roles]);
@@ -78,7 +76,7 @@ export function AuthProvider({ children, locale = "ru" }: { children: ReactNode;
   if (state.error) {
     return <div className="empty">{state.error}</div>;
   }
-  return <AuthContext.Provider value={{ ...state, has, call, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ...state, has, call, bearer, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): Auth {

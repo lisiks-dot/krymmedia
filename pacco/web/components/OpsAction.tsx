@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth";
-import { ApiError } from "@/lib/client";
+import { ApiError, upload } from "@/lib/client";
 import { fmtDay } from "@/lib/order";
 import type { OrderView } from "@/lib/types";
 
@@ -15,7 +15,7 @@ export function OpsAction({ order, onDone, compact = false }: {
   onDone: (next: OrderView, message: string) => void;
   compact?: boolean;
 }) {
-  const { call } = useAuth();
+  const { call, bearer } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unclaimed, setUnclaimed] = useState(false);
@@ -49,9 +49,36 @@ export function OpsAction({ order, onDone, compact = false }: {
   switch (order.status) {
     case "TO_HUB":
       return (
-        <form className="ops-form" onSubmit={form("accept", (f) => ({
-          lines: shipped.map((l) => ({ lineNo: l.lineNo, ok: f.get(`ok-${l.lineNo}`) !== "no", note: f.get(`note-${l.lineNo}`) || null })),
-        }), () => `${n}: приёмка завершена`)}>
+        <form className="ops-form" onSubmit={(e) => {
+          e.preventDefault();
+          const f = new FormData(e.currentTarget);
+          void (async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              // сначала фото по каждой строке, потом результат приёмки
+              const h = await bearer();
+              let count = 0;
+              for (const l of shipped) {
+                for (const file of (f.getAll(`photo-${l.lineNo}`) as File[]).filter((x) => x && x.size > 0)) {
+                  const form = new FormData();
+                  form.append("file", file);
+                  await upload(`/api/ops/orders/${n}/photos?lineNo=${l.lineNo}`, form, h);
+                  count++;
+                }
+              }
+              const next = await call<OrderView>(`/api/ops/orders/${n}/accept`, {
+                method: "POST",
+                body: JSON.stringify({ lines: shipped.map((l) => ({ lineNo: l.lineNo, ok: f.get(`ok-${l.lineNo}`) !== "no", note: f.get(`note-${l.lineNo}`) || null })) }),
+              });
+              onDone(next, `${n}: приёмка завершена${count ? `, фото: ${count}` : ""}`);
+            } catch (err) {
+              setError(err instanceof ApiError ? err.messages.join("; ") : "Не удалось выполнить шаг");
+            } finally {
+              setBusy(false);
+            }
+          })();
+        }}>
           {!compact ? <b>Приёмка: сверить с заказом и сфотографировать</b> : null}
           {shipped.map((l) => (
             <div key={l.lineNo} className="check-line">
@@ -61,10 +88,11 @@ export function OpsAction({ order, onDone, compact = false }: {
                 <label><input type="radio" name={`ok-${l.lineNo}`} value="no" />Не совпадает</label>
               </div>
               <input className="inline-input wide" name={`note-${l.lineNo}`} placeholder="Замечание, если есть" aria-label={`Замечание: ${l.title}`} />
+              <input className="file-in" type="file" name={`photo-${l.lineNo}`} accept="image/jpeg,image/png,image/webp" multiple aria-label={`Фото: ${l.title}`} />
             </div>
           ))}
           {err}
-          <button className="btn sm" type="submit" disabled={busy}>Принять на хабе</button>
+          <button className="btn sm" type="submit" disabled={busy}>{busy ? "Загружаем…" : "Принять на хабе"}</button>
         </form>
       );
     case "AT_HUB":

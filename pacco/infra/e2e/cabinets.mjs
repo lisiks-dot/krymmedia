@@ -49,8 +49,19 @@ try {
   await expectText(admin, toHub, "заказ в очереди приёмки");
   await admin.screenshot({ path: `${OUT}/ops-hub.png`, fullPage: true });
   const card = admin.locator(".qcard", { hasText: toHub });
+  // фото с приёмки: сгенерированная картинка «товара» 
+  const png = await admin.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = 480; c.height = 360;
+    const g = c.getContext("2d");
+    g.fillStyle = "#e6ebf2"; g.fillRect(0, 0, 480, 360);
+    g.fillStyle = "#22355a"; g.beginPath(); g.ellipse(240, 200, 170, 70, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "#16243f"; g.fillRect(70, 250, 340, 22);
+    return c.toDataURL("image/png").split(",")[1];
+  });
+  await card.locator("input[type=file]").first().setInputFiles({ name: "priemka.png", mimeType: "image/png", buffer: Buffer.from(png, "base64") });
   await card.getByRole("button", { name: "Принять на хабе" }).click();
-  await expectText(admin, `${toHub}: приёмка завершена`, "приёмка на хабе");
+  await expectText(admin, `${toHub}: приёмка завершена, фото: 1`, "приёмка на хабе с фото");
   await admin.getByRole("tab", { name: /Упаковка/ }).click();
   await admin.locator(".qcard", { hasText: toHub }).getByRole("button", { name: "Упаковано" }).click();
   await expectText(admin, `${toHub}: упакован`, "упаковка");
@@ -66,9 +77,21 @@ try {
   await admin.getByRole("tab", { name: /С возвратом/ }).click();
   await expectText(admin, "Повреждён", "решённый спор");
   await admin.screenshot({ path: `${OUT}/ops-disputes.png`, fullPage: true });
+  await admin.goto(`${BASE}/admin/orders/${toHub}`);
+  await admin.locator(".photo img").first().waitFor({ timeout: 30_000 });
+  console.log("  ✓ фото с приёмки в карточке заказа");
   await admin.goto(`${BASE}/admin/payouts`);
   await expectText(admin, "Calzoleria Verdi", "реестр выплат");
+  await admin.getByLabel(/Номер платёжки/).first().fill("SWIFT 2026-10-14/001");
+  await admin.getByRole("button", { name: "Выплачено" }).first().click();
+  await expectText(admin, "выплата отмечена", "отметка «выплачено»");
   await admin.screenshot({ path: `${OUT}/ops-payouts.png`, fullPage: true });
+  await admin.getByRole("link", { name: "Документы" }).first().click();
+  await expectText(admin, "К перечислению", "отчёт агента");
+  await admin.screenshot({ path: `${OUT}/ops-payout-report.png`, fullPage: true });
+  await admin.goto(`${BASE}/admin/notifications`);
+  await expectText(admin, "Код получения", "журнал уведомлений");
+  await admin.screenshot({ path: `${OUT}/ops-notifications.png`, fullPage: true });
   await admin.goto(`${BASE}/admin`);
   await expectText(admin, "Хаб: упаковка и передача", "обзор по этапам");
   await admin.screenshot({ path: `${OUT}/admin-overview.png`, fullPage: true });
@@ -97,10 +120,25 @@ try {
   await seller.screenshot({ path: `${OUT}/seller-slip.png`, fullPage: true });
   await seller.goto(`${BASE}/seller/payouts`);
   await expectText(seller, "In arrivo", "выплаты продавца");
+  await expectText(seller, "Pagato", "история выплат");
+  await seller.getByRole("link", { name: "Rendiconto e fattura" }).first().click();
+  await expectText(seller, "Da bonificare", "отчёт для продавца");
+  await seller.getByRole("radio", { name: /Fattura/ }).click();
+  await expectText(seller, "inversione contabile", "счёт на комиссию");
+  await seller.screenshot({ path: `${OUT}/seller-invoice.png`, fullPage: true });
 
   await seller.goto(`${BASE}/sell`);
   await expectText(seller, "Come funziona", "страница для продавцов");
   await seller.screenshot({ path: `${OUT}/sell-landing.png`, fullPage: true });
+
+  console.log("Письмо покупателю в Mailpit");
+  const box = await (await fetch("http://127.0.0.1:8025/api/v1/messages?limit=100")).json();
+  const mail = box.messages.find((m) => m.Subject.includes(atPickup) && m.Subject.includes("можно забирать"));
+  if (!mail) throw new Error("Нет письма «можно забирать» по заказу " + atPickup);
+  const mailPage = await (await browser.newContext({ viewport: { width: 640, height: 900 } })).newPage();
+  await mailPage.goto(`http://127.0.0.1:8025/view/${mail.ID}.html`);
+  await expectText(mailPage, "Код получения", "письмо с кодом");
+  await mailPage.screenshot({ path: `${OUT}/mail-pickup.png`, fullPage: true });
 
   console.log("Чужой пользователь не попадает в админку");
   await seller.goto(`${BASE}/admin`);

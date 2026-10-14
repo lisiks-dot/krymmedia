@@ -3,18 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { PickupPicker } from "@/components/PickupPicker";
 import { ProductArt } from "@/components/ProductArt";
 import { ApiError, api, cartId, rememberOrder } from "@/lib/client";
+import { optionalToken, whoAmI, type TokenInfo } from "@/lib/session";
 import { notifyCart } from "@/lib/local";
 import { goods, rub } from "@/lib/format";
-import { MODE_LABEL, type CartView, type DeliveryMode, type OrderView, type PaymentMethod } from "@/lib/types";
-
-const POINTS = [
-  { id: "cdek-msk", label: "СДЭК · Москва, ул. Покровка, 12", hours: "Ежедневно 10:00–21:00", note: "5 мин от м. Китай-город" },
-  { id: "bb-msk", label: "Boxberry · Москва, Ленинградский пр-т, 39", hours: "Пн–Сб 09:00–20:00", note: "Примерочная есть" },
-  { id: "post-spb", label: "Почта России · Санкт-Петербург, 191186", hours: "Пн–Пт 08:00–20:00", note: "Невский пр-т, 6" },
-  { id: "cdek-kzn", label: "СДЭК · Казань, ул. Баумана, 44", hours: "Ежедневно 10:00–20:00", note: "Пешеходная улица, вход со двора" },
-];
+import { MODE_LABEL, type BuyerProfile, type CartView, type DeliveryMode, type OrderView, type PaymentMethod, type PickupPoint } from "@/lib/types";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -23,6 +18,23 @@ export default function CheckoutPage() {
   const [loadError, setLoadError] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [point, setPoint] = useState<PickupPoint | null>(null);
+  const [me, setMe] = useState<TokenInfo | null>(null);
+  const [profile, setProfile] = useState<BuyerProfile | null>(null);
+
+  // Вошедший покупатель: подставляем данные профиля, заказ привяжется к аккаунту.
+  useEffect(() => {
+    void (async () => {
+      const who = await whoAmI();
+      if (!who) return;
+      setMe(who);
+      const token = await optionalToken();
+      if (!token) return;
+      const p = await api<BuyerProfile>("/api/me/profile", { headers: { Authorization: `Bearer ${token}` } }).catch(() => null);
+      if (p?.pickupPointId) setPoint(null);
+      setProfile(p);
+    })();
+  }, []);
 
   useEffect(() => {
     const m = new URLSearchParams(window.location.search).get("mode");
@@ -42,8 +54,10 @@ export default function CheckoutPage() {
     setErrors([]);
     try {
       const id = await cartId();
+      const token = await optionalToken();
       const order = await api<OrderView>("/api/orders", {
         method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: JSON.stringify({
           cartId: id,
           mode,
@@ -51,7 +65,8 @@ export default function CheckoutPage() {
           phone: f.get("phone"),
           passport: f.get("passport"),
           inn: f.get("inn"),
-          pickupPoint: f.get("pvz"),
+          pickupPointId: point?.id ?? null,
+          email: f.get("email") || null,
           consent: f.get("consent") === "on",
         }),
       });
@@ -84,13 +99,19 @@ export default function CheckoutPage() {
       <h1>Оформление заказа</h1>
       <div className="cols">
         <form className="checkout" onSubmit={submit} noValidate>
-          <fieldset className="cstep">
+          {me ? (
+            <div className="note info">Вы вошли как {me.name || me.username}. Заказ появится в <Link href="/account">личном кабинете</Link> на всех устройствах.</div>
+          ) : (
+            <div className="note info"><Link href="/account?from=checkout">Войдите</Link>, чтобы заказы были доступны на всех устройствах и данные подставлялись сами. Можно и без входа.</div>
+          )}
+          <fieldset className="cstep" key={profile ? "with-profile" : "empty"}>
             <legend><span className="n">1</span>Получатель</legend>
             <div className="two">
-              <div className="field"><label htmlFor="name">Имя и фамилия как в паспорте</label><input id="name" name="name" required autoComplete="name" /></div>
-              <div className="field"><label htmlFor="phone">Телефон</label><input id="phone" name="phone" required type="tel" autoComplete="tel" placeholder="+7 900 000-00-00" /></div>
+              <div className="field"><label htmlFor="name">Имя и фамилия как в паспорте</label><input id="name" name="name" required autoComplete="name" defaultValue={profile?.name ?? me?.name ?? ""} /></div>
+              <div className="field"><label htmlFor="phone">Телефон</label><input id="phone" name="phone" required type="tel" autoComplete="tel" placeholder="+7 900 000-00-00" defaultValue={profile?.phone ? `+${profile.phone}` : ""} /></div>
             </div>
-            <p className="hint">На этот номер придут СМС о статусе и код получения.</p>
+            <div className="field"><label htmlFor="email">Email <span className="muted">— необязательно</span></label><input id="email" name="email" type="email" autoComplete="email" placeholder="для писем о заказе" defaultValue={profile?.email ?? me?.email ?? ""} /></div>
+            <p className="hint">На телефон придут СМС о статусе и код получения, на почту — письма с подробностями.</p>
           </fieldset>
 
           <fieldset className="cstep">
@@ -104,15 +125,8 @@ export default function CheckoutPage() {
 
           <fieldset className="cstep">
             <legend><span className="n">3</span>Пункт выдачи</legend>
-            <div className="options">
-              {POINTS.map((p, i) => (
-                <label key={p.id} className="option pvz" htmlFor={p.id}>
-                  <input type="radio" id={p.id} name="pvz" value={p.label} defaultChecked={i === 0} />
-                  <span><b>{p.label}</b><span className="small muted">{p.hours} · {p.note}</span></span>
-                </label>
-              ))}
-            </div>
-            <p className="hint">Посылка хранится в пункте 7 дней. Примерить и отказаться от одежды можно прямо там.</p>
+            <PickupPicker key={profile?.pickupPointId ?? "default"} value={point?.id ?? profile?.pickupPointId ?? null} onChange={setPoint} />
+            <p className="hint">Посылка хранится в пункте 7 дней. Примерить и отказаться от одежды можно там, где есть примерочная.</p>
           </fieldset>
 
           <fieldset className="cstep">
@@ -135,7 +149,7 @@ export default function CheckoutPage() {
           </label>
           {errors.length ? <div className="note bad" role="alert">Проверьте форму: {errors.join("; ")}.</div> : null}
           <div className="controls">
-            <button className="btn" type="submit" disabled={busy || !q || q.foodOnly}>
+            <button className="btn" type="submit" disabled={busy || !q || q.foodOnly || !point}>
               {busy ? "Оформляем…" : q ? `Перейти к оплате ${rub(q.totalRub)}` : "Перейти к оплате"}
             </button>
             <Link className="btn ghost" href="/cart">Вернуться в корзину</Link>

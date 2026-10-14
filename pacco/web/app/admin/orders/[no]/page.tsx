@@ -5,10 +5,11 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { OpsAction } from "@/components/OpsAction";
 import { LineRow, Money, StageBar, Timeline } from "@/components/Order";
+import { Photos } from "@/components/Photos";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/client";
 import { fmtDay, statusTone } from "@/lib/order";
-import { MODE_LABEL, type OrderView } from "@/lib/types";
+import { MODE_LABEL, type NotificationView, type OrderView } from "@/lib/types";
 
 const STAFF_ACTORS: Record<string, string> = {
   buyer: "Покупатель", seller: "Продавец", hub: "Хаб", carrier: "Перевозчик", customs: "Таможня", pickup: "ПВЗ", support: "Поддержка", system: "Система",
@@ -16,7 +17,8 @@ const STAFF_ACTORS: Record<string, string> = {
 
 export default function AdminOrder() {
   const { no } = useParams<{ no: string }>();
-  const { call, has } = useAuth();
+  const { call, has, bearer } = useAuth();
+  const [notes, setNotes] = useState<NotificationView[] | null>(null);
   const [order, setOrder] = useState<OrderView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<{ tone: string; text: string } | null>(null);
@@ -25,7 +27,8 @@ export default function AdminOrder() {
 
   const load = useCallback(() => {
     call<OrderView>(`/api/admin/orders/${encodeURIComponent(no)}`).then(setOrder).catch(() => setError("Заказ не найден"));
-  }, [call, no]);
+    if (has("admin", "support")) call<NotificationView[]>(`/api/admin/notifications?order=${encodeURIComponent(no)}`).then(setNotes).catch(() => setNotes([]));
+  }, [call, has, no]);
   useEffect(load, [load]);
 
   async function support(path: string, body: unknown, ok: string) {
@@ -79,6 +82,28 @@ export default function AdminOrder() {
             {order.items.map((l) => <LineRow key={l.lineNo} line={l} />)}
             {order.parcelWeightG ? <span className="small muted">Вес посылки {(order.parcelWeightG / 1000).toLocaleString("ru-RU")} кг{order.carrierTracking ? ` · трек ${order.carrierTracking}` : ""}</span> : null}
           </section>
+
+          {order.photos.length ? (
+            <section className="panel">
+              <h3>Фото</h3>
+              <Photos photos={order.photos} src={(id) => `/api/admin/orders/${encodeURIComponent(order.number)}/photos/${id}`} headers={bearer}
+                caption={(p) => `${p.kind === "HUB" ? "Хаб" : "Покупатель"}${p.lineNo !== null ? ` · ${order.items[p.lineNo]?.title ?? ""}` : ""}`} />
+            </section>
+          ) : null}
+
+          {notes && notes.length ? (
+            <section className="panel">
+              <h3>Уведомления покупателю</h3>
+              <ul className="feed compact">
+                {notes.map((n) => (
+                  <li key={n.id}>
+                    <span className={`pill ${n.status === "FAILED" ? "bad" : n.status === "SENT" ? "ok" : "neutral"}`}>{n.channel === "SMS" ? "СМС" : "Письмо"} · {n.status === "SENT" ? "отправлено" : n.status === "LOGGED" ? "в журнале" : "ошибка"}</span>
+                    <div><p>{n.subject ?? n.body}</p><span className="small muted">{n.recipient} · {new Date(n.createdAt).toLocaleString("ru-RU")}{n.error ? ` · ${n.error}` : ""}</span></div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           <section className="panel">
             <h3>История</h3>

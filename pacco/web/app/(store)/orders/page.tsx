@@ -44,6 +44,7 @@ export default function OrdersPage() {
           <button type="submit">Найти</button>
         </form>
       </div>
+      <div className="note info"><Link href="/account">Войдите в личный кабинет</Link>, чтобы заказы были доступны на всех устройствах. Заказы из этого браузера сохранятся в кабинете сами.</div>
       {rows === null ? null : rows.length === 0 ? (
         <div className="empty">
           <b>Здесь появятся ваши заказы</b>

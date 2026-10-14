@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { api, cartId } from "@/lib/client";
 import { CART_EVENT, FAV_EVENT, favorites, markSeen, toggleFavorite } from "@/lib/local";
 import type { CartView } from "@/lib/types";
-import { IconBag, IconBox, IconHeart, IconHome, IconStore } from "./Icons";
+import { IconBag, IconBox, IconHeart, IconHome, IconStore, IconUser } from "./Icons";
 
 export function FavoriteButton({ id, title }: { id: number; title: string }) {
   const [on, setOn] = useState(false);
@@ -66,6 +66,7 @@ export function HeaderActions() {
     <nav className="actions" aria-label="Покупки">
       <Link className="action" href="/sell"><IconStore /><span>Продавцам</span></Link>
       <Link className="action" href="/orders"><IconBox /><span>Заказы</span></Link>
+      <Link className="action" href="/account"><IconUser /><span>Кабинет</span></Link>
       <Link className="action" href="/favorites" aria-label={`Избранное: ${fav}`}>
         <IconHeart /><span>Избранное</span>{fav ? <b className="count num">{fav}</b> : null}
       </Link>
@@ -83,7 +84,7 @@ export function TabBar() {
       <Link className="action" href="/"><IconHome /><span>Главная</span></Link>
       <Link className="action" href="/favorites"><IconHeart /><span>Избранное</span>{fav ? <b className="count num">{fav}</b> : null}</Link>
       <Link className="action" href="/cart"><IconBag /><span>Корзина</span>{cart ? <b className="count num">{cart}</b> : null}</Link>
-      <Link className="action" href="/orders"><IconBox /><span>Заказы</span></Link>
+      <Link className="action" href="/account"><IconUser /><span>Кабинет</span></Link>
     </nav>
   );
 }

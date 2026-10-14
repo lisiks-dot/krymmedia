@@ -87,3 +87,37 @@ export const SELLER_STATUS_RU: Record<SellerStatus, { label: string; tone: strin
 
 export const fmtDate = (iso: string, locale = "ru-RU") =>
   new Date(iso).toLocaleString(locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+export interface PayoutSummary {
+  id: number;
+  number: string;
+  sellerId: number;
+  sellerName: string;
+  grossEurCents: number;
+  commissionEurCents: number;
+  netEurCents: number;
+  linesCount: number;
+  status: "READY" | "PAID";
+  bankRef: string | null;
+  createdAt: string;
+  paidAt: string | null;
+}
+
+export interface PayoutLine {
+  orderNumber: string;
+  lineNo: number;
+  title: string;
+  size: string | null;
+  qty: number;
+  category: Category;
+  grossEurCents: number;
+  rate: number;
+  commissionEurCents: number;
+  completedAt: string;
+}
+
+export interface PayoutDetail {
+  payout: PayoutSummary;
+  seller: Seller;
+  lines: PayoutLine[];
+}

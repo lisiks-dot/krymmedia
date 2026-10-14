@@ -62,6 +62,9 @@ try {
       await page.fill("#phone", "+7 916 123-45-67");
       await page.fill("#passport", "4500 123456");
       await page.fill("#inn", "770123456789");
+      await page.fill("#email", "anna@example.ru");
+      await page.locator(".picker-list .option").nth(1).click();
+      await page.locator(".leaflet-tile-loaded").first().waitFor({ timeout: 30_000 }).catch(() => console.log("  ! тайлы карты не загрузились"));
       await page.locator("label[for=pay-sbp]").click();
       await page.screenshot({ path: `${OUT}/store-${name}-checkout.png`, fullPage: true });
       await page.getByRole("button", { name: /Перейти к оплате/ }).click();
@@ -73,11 +76,34 @@ try {
       await page.screenshot({ path: `${OUT}/store-${name}-order-paid.png`, fullPage: true });
       await page.goto(`${BASE}/orders`);
       await expectText(page, "Активные", "список заказов");
+
+      console.log("  регистрация и личный кабинет");
+      await page.goto(`${BASE}/account`);
+      await page.waitForSelector("#username", { timeout: 60_000 });
+      await page.locator("a[href*='registration']").first().click();
+      const user = `anna${Date.now()}`;
+      await page.fill("#username", user);
+      await page.fill("#email", `${user}@example.ru`);
+      await page.fill("#firstName", "Анна");
+      await page.fill("#lastName", "Смирнова");
+      await page.fill("#password", "Ilpacco-2026!");
+      await page.fill("#password-confirm", "Ilpacco-2026!");
+      await page.screenshot({ path: `${OUT}/store-${name}-register.png` });
+      await Promise.all([page.waitForURL(`${BASE}/account**`, { timeout: 60_000 }), page.locator("input[type=submit], button[type=submit]").first().click()]);
+      await expectText(page, "Заказы из этого браузера сохранены", "заказ привязан к аккаунту");
+      await page.screenshot({ path: `${OUT}/store-${name}-account.png`, fullPage: true });
+      await page.goto(`${BASE}/account/profile`);
+      await expectText(page, "Уведомления о заказах", "профиль");
+      await page.screenshot({ path: `${OUT}/store-${name}-profile.png`, fullPage: true });
+      await page.goto(`${BASE}/account/notifications`);
+      await expectText(page, "оплачен", "лента уведомлений");
+      await page.screenshot({ path: `${OUT}/store-${name}-notifications.png`, fullPage: true });
     }
 
     console.log("  заказ в пункте выдачи по ссылке из СМС");
     await page.goto(`${BASE}/orders/${atPickup}?key=${pickupKey}`);
     await expectText(page, "Код получения", "код получения");
+    await page.locator(".photo img").first().waitFor({ timeout: 30_000 }).catch(() => undefined);
     await page.screenshot({ path: `${OUT}/store-${name}-order-pickup.png`, fullPage: true });
     await ctx.close();
   }

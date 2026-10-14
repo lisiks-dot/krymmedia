@@ -100,6 +100,47 @@ export interface OrderEvent {
   at: string;
 }
 
+export interface PhotoView {
+  id: number;
+  lineNo: number | null;
+  kind: "HUB" | "DISPUTE";
+  createdAt: string;
+}
+
+export interface PickupPoint {
+  id: number;
+  carrier: string;
+  city: string;
+  address: string;
+  lat: number;
+  lng: number;
+  hours: string;
+  note: string | null;
+  fitting: boolean;
+}
+
+export interface BuyerProfile {
+  name: string | null;
+  phone: string | null;
+  email: string | null;
+  pickupPointId: number | null;
+  notifySms: boolean;
+  notifyEmail: boolean;
+}
+
+export interface NotificationView {
+  id: number;
+  orderId: number | null;
+  channel: "SMS" | "EMAIL";
+  recipient: string;
+  subject: string | null;
+  body: string;
+  status: "SENT" | "LOGGED" | "FAILED";
+  provider: string;
+  error: string | null;
+  createdAt: string;
+}
+
 export interface DisputeView {
   id: number;
   lines: number[];
@@ -144,6 +185,10 @@ export interface OrderView {
   accessKey: string | null;
   events: OrderEvent[];
   dispute: DisputeView | null;
+  photos: PhotoView[];
+  buyerEmail: string | null;
+  pickupPointId: number | null;
+  linkedToAccount: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -12,3 +12,4 @@ export const IconRuble = () => <svg {...base}><path d="M8 20V4h5a4 4 0 0 1 0 8H6
 export const IconTruck = () => <svg {...base}><path d="M3 6h11v10H3zM14 10h4l3 3v3h-7" /><circle cx="7" cy="18" r="2" /><circle cx="17" cy="18" r="2" /></svg>;
 export const IconReturn = () => <svg {...base}><path d="M9 14 4 9l5-5" /><path d="M4 9h11a5 5 0 0 1 0 10h-3" /></svg>;
 export const IconCheck = () => <svg {...base}><circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" /></svg>;
+export const IconUser = () => <svg {...base}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>;

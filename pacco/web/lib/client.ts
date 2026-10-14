@@ -1,5 +1,6 @@
 "use client";
 
+import { optionalToken } from "./session";
 import type { Problem } from "./types";
 
 export class ApiError extends Error {
@@ -81,11 +82,38 @@ export function orderKey(number: string): string | null {
   return orderKeys()[number] || null;
 }
 
-/** Запрос от имени покупателя заказа: с ключом, если он есть в этом браузере. */
-export function orderApi<T>(number: string, path = "", init?: RequestInit): Promise<T> {
+/** Заголовки владельца заказа: ключ из этого браузера и/или токен аккаунта. */
+export async function ownerHeaders(number: string): Promise<Record<string, string>> {
   const key = orderKey(number);
+  const token = await optionalToken();
+  return { ...(key ? { "X-Order-Key": key } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+}
+
+/** Запрос от имени покупателя заказа. */
+export async function orderApi<T>(number: string, path = "", init?: RequestInit): Promise<T> {
+  const owner = await ownerHeaders(number);
   return api<T>(`/api/orders/${encodeURIComponent(number)}${path}`, {
     ...init,
-    headers: { ...(init?.headers ?? {}), ...(key ? { "X-Order-Key": key } : {}) },
+    headers: { ...(init?.headers ?? {}), ...owner },
   });
+}
+
+/** Загрузка файла (multipart): без Content-Type, его выставит браузер с границей. */
+export async function upload<T>(path: string, form: FormData, headers: Record<string, string>): Promise<T> {
+  const res = await fetch(path, { method: "POST", body: form, headers, cache: "no-store" });
+  const text = await res.text();
+  const body = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new ApiError(res.status, (body ?? {}) as Problem);
+  return body as T;
+}
+
+/** Картинка, доступная только с заголовками (фото заказа), как blob-URL для <img>. */
+export async function blobUrl(path: string, headers: Record<string, string>): Promise<string> {
+  const res = await fetch(path, { headers, cache: "no-store" });
+  if (!res.ok) throw new ApiError(res.status, {});
+  return URL.createObjectURL(await res.blob());
+}
+
+export function allOrderKeys(): { number: string; key: string }[] {
+  return Object.entries(orderKeys()).filter(([, k]) => k).map(([number, key]) => ({ number, key }));
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { LineRow } from "@/components/Order";
+import { Photos } from "@/components/Photos";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/client";
 import { rub } from "@/lib/format";
@@ -67,6 +68,7 @@ export default function DisputesPage() {
 }
 
 function DisputeCard({ c, onResolve }: { c: Case; onResolve: (c: Case, refund: boolean, text: string) => void }) {
+  const { bearer } = useAuth();
   const [text, setText] = useState("");
   const lines = c.order.items.filter((l) => c.dispute.lines.includes(l.lineNo));
   const sum = lines.reduce((s, l) => s + l.lineRub, 0);
@@ -79,6 +81,14 @@ function DisputeCard({ c, onResolve }: { c: Case; onResolve: (c: Case, refund: b
       </header>
       {c.dispute.comment ? <blockquote>«{c.dispute.comment}»</blockquote> : null}
       {lines.map((l) => <LineRow key={l.lineNo} line={l} />)}
+      {c.order.photos.length ? (
+        <div className="stack tight">
+          <span className="small muted">Фото: с хаба при приёмке и от покупателя — сравните</span>
+          <Photos photos={c.order.photos.filter((p) => p.lineNo === null || c.dispute.lines.includes(p.lineNo))}
+            src={(id) => `/api/admin/orders/${encodeURIComponent(c.order.number)}/photos/${id}`} headers={bearer}
+            caption={(p) => (p.kind === "HUB" ? "Хаб, приёмка" : "Покупатель")} />
+        </div>
+      ) : null}
       {c.dispute.status === "OPEN" ? (
         <div className="stack tight">
           <label className="small" htmlFor={`r-${c.dispute.id}`}>Ответ покупателю</label>

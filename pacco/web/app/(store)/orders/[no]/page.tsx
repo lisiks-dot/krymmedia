@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { LineRow, Money, StageBar, Timeline } from "@/components/Order";
-import { ApiError, orderApi, rememberOrder } from "@/lib/client";
+import { Photos } from "@/components/Photos";
+import { ApiError, orderApi, ownerHeaders, rememberOrder, upload } from "@/lib/client";
 import { rub } from "@/lib/format";
 import { DISPUTE_REASONS, NEXT_STEP, eta, fmtDay, statusTone } from "@/lib/order";
 import { MODE_LABEL, type OrderView } from "@/lib/types";
@@ -41,7 +42,7 @@ export default function OrderPage() {
     return () => window.clearInterval(t);
   }, [no, load]);
 
-  async function act(path: string, body?: unknown, ok?: string) {
+  async function act(path: string, body?: unknown, ok?: string): Promise<boolean> {
     setBusy(true);
     setMessage(null);
     try {
@@ -49,8 +50,10 @@ export default function OrderPage() {
       setOrder(next);
       setPanel("none");
       if (ok) setMessage({ tone: "ok", text: ok });
+      return true;
     } catch (e) {
       setMessage({ tone: "bad", text: e instanceof ApiError ? e.messages.join("; ") : "Не получилось. Попробуйте ещё раз." });
+      return false;
     } finally {
       setBusy(false);
     }
@@ -64,7 +67,23 @@ export default function OrderPage() {
       setMessage({ tone: "bad", text: "Отметьте товары, с которыми проблема." });
       return;
     }
-    void act("/disputes", { lines, reason: f.get("reason"), comment: f.get("comment") }, "Спор открыт. Поддержка ответит в течение 2 рабочих дней.");
+    const files = (f.getAll("photos") as File[]).filter((x) => x && x.size > 0).slice(0, 5);
+    void (async () => {
+      const opened = await act("/disputes", { lines, reason: f.get("reason"), comment: f.get("comment") }, "Спор открыт. Поддержка ответит в течение 2 рабочих дней.");
+      if (!opened || !files.length) return;
+      try {
+        const h = await ownerHeaders(no);
+        for (const file of files) {
+          const form = new FormData();
+          form.append("file", file);
+          await upload(`/api/orders/${encodeURIComponent(no)}/photos?lineNo=${lines[0]}`, form, h);
+        }
+        setMessage({ tone: "ok", text: `Спор открыт, фото приложены: ${files.length}. Поддержка ответит в течение 2 рабочих дней.` });
+      } catch (e) {
+        setMessage({ tone: "bad", text: `Спор открыт, но фото не загрузились: ${e instanceof ApiError ? e.messages.join("; ") : "ошибка сети"}` });
+      }
+      load();
+    })();
   }
 
   if (error && !order) {
@@ -78,6 +97,8 @@ export default function OrderPage() {
   if (!order) return <div className="skel" style={{ height: 420 }} />;
 
   const owner = order.accessKey !== null;
+  const photoSrc = (id: number) => `/api/orders/${encodeURIComponent(order.number)}/photos/${id}`;
+  const caption = (p: { lineNo: number | null }) => (p.lineNo !== null ? order.items[p.lineNo]?.title ?? "" : "Посылка");
   const tone = statusTone(order.status);
   const until = eta(order);
 
@@ -161,6 +182,10 @@ export default function OrderPage() {
                   <label htmlFor="comment">Подробности</label>
                   <textarea id="comment" name="comment" rows={3} maxLength={1000} placeholder="Например: отклеилась подошва на левом ботинке" />
                 </div>
+                <div className="field">
+                  <label htmlFor="photos">Фото <span className="muted">— до 5, JPEG, PNG или WebP до 5 МБ</span></label>
+                  <input id="photos" name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+                </div>
                 <p className="hint">Отправлять товар обратно в Италию не нужно. Сохраните его и упаковку до решения спора.</p>
                 <div className="controls">
                   <button className="btn" type="submit" disabled={busy}>Открыть спор</button>
@@ -176,6 +201,7 @@ export default function OrderPage() {
               {order.dispute.comment ? <p className="muted">«{order.dispute.comment}»</p> : null}
               {order.dispute.status === "REFUNDED" ? <p>Вернули {rub(order.dispute.refundRub)}. Деньги придут на карту за 1–3 рабочих дня.</p> : null}
               {order.dispute.resolution && order.dispute.status !== "REFUNDED" ? <p>{order.dispute.resolution}</p> : null}
+              <Photos photos={order.photos.filter((p) => p.kind === "DISPUTE")} src={photoSrc} headers={() => ownerHeaders(no)} caption={caption} />
             </section>
           ) : null}
 
@@ -183,6 +209,14 @@ export default function OrderPage() {
             <h3>Товары</h3>
             {order.items.map((l) => <LineRow key={l.lineNo} line={l} />)}
           </section>
+
+          {order.photos.some((p) => p.kind === "HUB") ? (
+            <section className="panel">
+              <h3>Фото с приёмки на хабе</h3>
+              <p className="small muted">Так товар выглядел, когда мы сверили его с заказом в Милане.</p>
+              <Photos photos={order.photos.filter((p) => p.kind === "HUB")} src={photoSrc} headers={() => ownerHeaders(no)} caption={caption} />
+            </section>
+          ) : null}
 
           <section className="panel">
             <h3>История</h3>
@@ -197,7 +231,8 @@ export default function OrderPage() {
           <hr />
           <span className="small muted">Получатель</span>
           <span>{order.buyerName}</span>
-          {!owner ? <span className="small muted">Полные данные и действия с заказом — в браузере, где он оформлен, или по ссылке из СМС.</span> : null}
+          {!owner ? <span className="small muted">Полные данные и действия с заказом — в браузере, где он оформлен, по ссылке из СМС или после <Link href="/account">входа в кабинет</Link>.</span> : null}
+          {owner && !order.linkedToAccount ? <Link className="small" href="/account">Сохранить заказ в личном кабинете</Link> : null}
           <Link className="small" href="/help#returns">Как работают возврат и споры</Link>
         </aside>
       </div>

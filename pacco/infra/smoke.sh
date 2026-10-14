@@ -42,12 +42,17 @@ curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"productId\":$loafer
 total=$(curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"productId\":$oil}" "$BASE/api/carts/$cart/items" | jq .quote.totalRub)
 [[ "$total" == "23140" ]] || fail "итог корзины $total, ожидали 23140"
 
+point=$(curl -fsS "$BASE/api/pickup-points?city=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0" | jq '.[0].id')
+[[ "$point" =~ ^[0-9]+$ ]] || fail "нет пунктов выдачи в Москве"
+# PNG 1×1 для фото с приёмки
+printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' | base64 -d > /tmp/ilpacco-photo.png
+
 new_order() {
   local cart
   cart=$(curl -fsS -X POST "$BASE/api/carts" | jq -r .id)
   curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"productId\":$loafers,\"size\":\"${2:-41}\"}" "$BASE/api/carts/$cart/items" >/dev/null
   curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"productId\":$oil}" "$BASE/api/carts/$cart/items" >/dev/null
-  curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"cartId\":\"$cart\",\"mode\":\"GROUND\",\"buyerName\":\"$1\",\"phone\":\"+7 916 000-00-00\",\"passport\":\"4500123456\",\"inn\":\"770000000000\",\"pickupPoint\":\"СДЭК · Москва, ул. Покровка, 12\",\"consent\":true}" "$BASE/api/orders"
+  curl -fsS -X POST -H 'Content-Type: application/json' -d "{\"cartId\":\"$cart\",\"mode\":\"GROUND\",\"buyerName\":\"$1\",\"phone\":\"+7 916 000-00-00\",\"passport\":\"4500123456\",\"inn\":\"770000000000\",\"pickupPointId\":$point,\"email\":\"buyer@example.ru\",\"consent\":true}" "$BASE/api/orders"
 }
 pay() { curl -fsS -X POST -H "X-Order-Key: $2" -H 'Content-Type: application/json' -d '{"method":"SBP"}' "$BASE/api/orders/$1/pay" | jq -r .status; }
 api_post() {
@@ -84,7 +89,11 @@ status=$(api_post "$seller" "/api/seller/orders/$number/confirm" | jq -r .status
 status=$(api_post "$seller" "/api/seller/orders/$number/ship" '{"tracking":"BRT-7781"}' | jq -r .status)
 [[ "$status" == "TO_HUB" ]] || fail "после отправки на хаб статус $status"
 
-step "Хаб: приёмка, упаковка, передача перевозчику"
+step "Хаб: фото, приёмка, упаковка, передача перевозчику"
+photo=$(curl -fsS -X POST -H "Authorization: Bearer $ops" -F "file=@/tmp/ilpacco-photo.png;type=image/png" "$BASE/api/ops/orders/$number/photos?lineNo=0" | jq .id)
+code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/orders/$number/photos/$photo")
+[[ "$code" == "403" ]] || fail "фото заказа доступно без ключа: $code"
+curl -fsS -o /dev/null -H "X-Order-Key: $key" "$BASE/api/orders/$number/photos/$photo" || fail "покупатель не видит фото с хаба"
 status=$(api_post "$ops" "/api/ops/orders/$number/accept" '{"lines":[{"lineNo":0,"ok":true},{"lineNo":1,"ok":true}]}' | jq -r .status)
 [[ "$status" == "AT_HUB" ]] || fail "после приёмки статус $status"
 api_post "$ops" "/api/ops/orders/$number/pack" '{"weightGrams":1350}' >/dev/null
@@ -112,6 +121,21 @@ status=$(api_post "$ops" "/api/ops/orders/$number/complete" | jq -r .status)
 events=$(curl -fsS "$BASE/api/orders/$number" | jq '.events | length')
 (( events >= 12 )) || fail "в истории заказа $events событий"
 
+step "Реестр выплат"
+finance=$(token_for finance)
+made=$(api_post "$finance" "/api/admin/payouts/batches" | jq '[.[] | select(.sellerName == "Calzoleria Verdi")] | length')
+[[ "$made" == "1" ]] || fail "в реестре нет выплаты Calzoleria Verdi"
+
+step "Уведомления: письмо в Mailpit и журнал СМС"
+for i in $(seq 1 24); do
+  mails=$(curl -fsS "http://127.0.0.1:8025/api/v1/messages?limit=200" | jq --arg n "$number" '[.messages[] | select(.Subject | contains($n))] | length')
+  (( mails >= 4 )) && break
+  sleep 5
+done
+(( mails >= 4 )) || fail "в Mailpit $mails писем по заказу $number, ожидали не меньше 4"
+sms=$(curl -fsS -H "Authorization: Bearer $support" "$BASE/api/admin/notifications?order=$number" | jq --arg c "$pickup" '[.[] | select(.channel == "SMS" and (.body | contains("Код получения " + $c)))] | length')
+(( sms >= 1 )) || fail "нет СМС с кодом получения в журнале"
+
 step "Заказы в разных статусах для кабинетов"
 o=$(new_order "Елена Орлова" 42); n2=$(jq -r .number <<<"$o"); pay "$n2" "$(jq -r .accessKey <<<"$o")" >/dev/null
 o=$(new_order "Павел Кузнецов" 43); n3=$(jq -r .number <<<"$o"); pay "$n3" "$(jq -r .accessKey <<<"$o")" >/dev/null
@@ -135,7 +159,7 @@ code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(token_
 [[ "$code" == "200" ]] || fail "финансы не видят реестр выплат: $code"
 
 step "Страницы отдаются"
-for path in /admin /seller /sell /legal "/orders/$number" "/pay/$n4"; do
+for path in /admin /seller /sell /legal /account "/orders/$number" "/pay/$n4" /silent-check-sso.html; do
   curl -fsS -o /dev/null "$BASE$path" || fail "$path недоступна"
 done
 login_page=$(curl -sS "$BASE/auth/realms/pacco/protocol/openid-connect/auth?client_id=pacco-web&response_type=code&scope=openid&redirect_uri=$BASE/admin&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256")

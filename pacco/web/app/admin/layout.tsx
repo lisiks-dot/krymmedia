@@ -16,6 +16,7 @@ const GROUPS: { title: string; items: Section[] }[] = [
       { href: "/admin/hub", label: "Хаб в Милане", roles: ["admin", "ops"] },
       { href: "/admin/delivery", label: "Таможня и ПВЗ", roles: ["admin", "ops"] },
       { href: "/admin/disputes", label: "Споры", roles: ["admin", "support"] },
+      { href: "/admin/notifications", label: "Уведомления", roles: ["admin", "support"] },
     ],
   },
   {
