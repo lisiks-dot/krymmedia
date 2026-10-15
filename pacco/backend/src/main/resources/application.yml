@@ -54,6 +54,13 @@ springdoc:
     path: /swagger-ui.html
 
 pacco:
+  sourcing:
+    # Импорт каталога Zalando: честный бот, пауза между запросами, наценка к рознице поставщика
+    user-agent: ${SOURCING_USER_AGENT:ilpacco-catalog-import/0.4 (+https://ilpacco.ru/legal#bot)}
+    delay-ms: ${SOURCING_DELAY_MS:3000}
+    max-items: 200
+    markup-percent: 10
+    refresh-cron: "0 30 4 * * *"
   public-url: ${PUBLIC_URL:http://localhost}
   notifications:
     interval-ms: 5000

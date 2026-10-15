@@ -24,6 +24,7 @@ const GROUPS: { title: string; items: Section[] }[] = [
     items: [
       { href: "/admin/sellers", label: "Продавцы", roles: ["admin", "moderator"] },
       { href: "/admin/products", label: "Карточки", roles: ["admin", "moderator"] },
+      { href: "/admin/import", label: "Импорт с Zalando", roles: ["admin", "moderator"] },
       { href: "/admin/compliance", label: "Комплаенс", roles: ["admin", "moderator"] },
     ],
   },

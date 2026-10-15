@@ -1,0 +1,5 @@
+aw_product_id;merchant_product_id;product_name;brand_name;search_price;currency;merchant_category;colour;Fashion:size;in_stock;merchant_deep_link;merchant_image_url
+1;FU151A0AB-B11001;Cardigan in lana merino;Falconeri;89,90;EUR;Abbigliamento > Maglieria;blu;M;1;https://www.zalando.it/falconeri-cardigan-blu-FU151A0AB-B11.html;https://img/x.jpg
+2;FU151A0AB-B11002;Cardigan in lana merino;Falconeri;89,90;EUR;Abbigliamento > Maglieria;blu;L;1;https://www.zalando.it/falconeri-cardigan-blu-FU151A0AB-B11.html;https://img/x.jpg
+3;FU151A0AB-B11003;Cardigan in lana merino;Falconeri;89,90;EUR;Abbigliamento > Maglieria;blu;XL;0;https://www.zalando.it/falconeri-cardigan-blu-FU151A0AB-B11.html;https://img/x.jpg
+4;BO311C0ZZ-Q11001;"Borsa a mano ""Diana""";Borbonese;690,00;EUR;Borse;nero;Taglia unica;1;https://www.zalando.it/borbonese-borsa-BO311C0ZZ-Q11.html;https://img/y.jpg

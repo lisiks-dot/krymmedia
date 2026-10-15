@@ -40,6 +40,7 @@ class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/admin/compliance/**").hasAnyRole("admin", "moderator")
                 .requestMatchers("/api/admin/compliance/**").hasRole("admin")
                 .requestMatchers("/api/admin/products/**").hasAnyRole("admin", "moderator")
+                .requestMatchers("/api/admin/import/**").hasAnyRole("admin", "moderator")
                 .requestMatchers(HttpMethod.GET, "/api/admin/orders/**").hasAnyRole("admin", "support", "ops")
                 .requestMatchers("/api/admin/orders/**").hasAnyRole("admin", "support")
                 .requestMatchers("/api/admin/disputes/**").hasAnyRole("admin", "support")

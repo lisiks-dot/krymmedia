@@ -107,6 +107,14 @@ public class Product {
         this.priceEurCents = priceEurCents;
     }
 
+    /** Новые цена и размеры от поставщика (импорт каталога). */
+    public void updateOffer(long priceEurCents, List<String> sizes) {
+        this.priceEurCents = priceEurCents;
+        if (sizes != null && !sizes.isEmpty()) {
+            this.sizes = String.join(",", sizes);
+        }
+    }
+
     public ItemSpec toItemSpec() {
         return new ItemSpec(category, hsCode, priceEurCents, aerosol);
     }

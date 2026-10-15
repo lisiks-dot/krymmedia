@@ -1,0 +1,10 @@
+User-agent: Pinterestbot
+Crawl-delay: 0.2
+
+User-agent: *
+Allow: /trend-rewind/*
+Disallow: /*&*&*&*
+Disallow: /cart/*
+Disallow: /myaccount/*
+Allow: /api/navigation
+Disallow: /api/*
