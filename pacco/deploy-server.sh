@@ -32,11 +32,27 @@ if [[ ! -f server.env ]]; then
   echo "Создан server.env с новыми паролями (только на этом сервере)."
 fi
 
+# Свободные порты: на сервере уже работают другие сайты и сервисы — занятые порты не трогаем, берём следующие.
+docker compose --env-file server.env down --remove-orphans >/dev/null 2>&1 || true
+busy() { ss -Hltn "( sport = :$1 )" 2>/dev/null | grep -q . ; }
+pick() {  # pick ПЕРЕМЕННАЯ ПОРТ_ПО_УМОЛЧАНИЮ
+  local var=$1 p
+  p=$(grep "^$var=" server.env | cut -d= -f2); p=${p:-$2}
+  [[ "$MODE" == "standalone" && ( "$var" == HTTP_PORT || "$var" == HTTPS_PORT ) ]] && return 0
+  while busy "$p" || grep -q "=$p\$" <<<"$TAKEN"; do p=$((p + 1)); done
+  sed -i "s|^$var=.*|$var=$p|" server.env
+  TAKEN+=$'\n'"$var=$p"
+  echo "  $var=$p"
+}
+TAKEN=""
+echo "Порты (занятые другими сервисами пропускаем):"
+pick HTTP_PORT 8080; pick HTTPS_PORT 8443; pick MAILPIT_PORT 8026; pick DB_HOST_PORT 15432; pick REDIS_HOST_PORT 16379
+
 echo "Собираем и запускаем (первый раз 5–10 минут)…"
 docker compose --env-file server.env up -d --build
 
 PORT=$(grep ^HTTP_PORT server.env | cut -d= -f2)
-for i in $(seq 1 90); do
+for i in $(seq 1 120); do
   if curl -fsS -o /dev/null "http://127.0.0.1:$PORT/api/products" -H "Host: $DOMAIN"; then break; fi
   sleep 5
 done
@@ -50,7 +66,7 @@ if [[ "$MODE" == "panel" ]]; then
   1. Включить SSL-сертификат Let's Encrypt.
   2. Настроить проксирование всех запросов на http://127.0.0.1:$PORT
      (FASTPANEL: Сайт → Настройки → «Проксирование» / Node.js-обработчик по адресу; ISPmanager: «Обработчик — Proxy»).
-     Готовый блок для nginx — в pacco/infra/nginx-panel.conf.
+     Готовый блок для nginx — в $DIR/pacco/infra/nginx-panel.conf (порт в нём замените на $PORT).
 После этого: https://$DOMAIN · кабинет сотрудников https://$DOMAIN/admin
 Пароли admin/seller и др. — change-me-now: смените сразу в https://$DOMAIN/auth/admin (realm pacco).
 MSG
