@@ -1,5 +1,12 @@
 # SITE_ADDRESS=ilpacco.ru — Caddy сам получит сертификат Let's Encrypt.
 # SITE_ADDRESS=:80 — без HTTPS, для локального запуска и проверки в CI.
+{
+	# Если перед Caddy стоит nginx панели хостинга (HTTPS там), верим его X-Forwarded-* — Keycloak видит https и IP клиента.
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
 {$SITE_ADDRESS::80} {
 	encode gzip
 

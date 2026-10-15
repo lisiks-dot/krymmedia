@@ -1,5 +1,11 @@
 # Изменения
 
+## ilpacco-v0.3.2 — 15.10.2026
+
+- Установка на VPS одной командой: `deploy-server.sh` (Docker, пароли, сборка, проверка).
+- Режим «за панелью хостинга» (FASTPANEL, ISPmanager): стек слушает 127.0.0.1:8080, домен и HTTPS — в панели; пример nginx — `infra/nginx-panel.conf`; профиль `server.env.example`.
+- Caddy доверяет заголовкам X-Forwarded-* от прокси в частных сетях.
+
 ## ilpacco-v0.3.1 — 14.10.2026
 
 - Запуск на своём компьютере одной командой: `start-local.sh` / `start-local.ps1`, профиль `local.env` — сайт на http://127.0.0.1:8025, Mailpit на 8026.

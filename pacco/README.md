@@ -99,6 +99,22 @@ cd backend && mvn verify                   # тесты; интеграцион�
 
 ## Деплой на сервер
 
+### VPS с панелью хостинга (FASTPANEL, ISPmanager) или без неё — одной командой
+
+Нужен VPS (Ubuntu 22.04/24.04 или Debian 12, от 2 vCPU и 4 ГБ RAM) с root-доступом по SSH. Обычный виртуальный
+хостинг (только PHP, MySQL и FTP) не подходит: проекту нужны Docker, Java и PostgreSQL.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lisiks-dot/krymmedia/main/pacco/deploy-server.sh | sudo bash               # за панелью
+curl -fsSL https://raw.githubusercontent.com/lisiks-dot/krymmedia/main/pacco/deploy-server.sh | sudo MODE=standalone bash # без панели
+```
+
+За панелью стек слушает `127.0.0.1:8080`; в панели для сайта включите Let's Encrypt и проксирование на этот адрес
+(готовый блок — `infra/nginx-panel.conf`). Пароли базы и Keycloak скрипт генерирует сам в `/opt/ilpacco/pacco/server.env`.
+База MySQL из панели не используется — у проекта свой PostgreSQL в Docker.
+
+### Вручную
+
 Подойдёт VPS с Ubuntu 24.04, 2 vCPU и 4 ГБ RAM, например в Yandex Cloud или Selectel.
 
 1. Установите Docker: `curl -fsSL https://get.docker.com | sh`.
