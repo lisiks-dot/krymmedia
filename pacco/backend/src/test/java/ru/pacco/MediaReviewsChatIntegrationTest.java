@@ -193,7 +193,7 @@ class MediaReviewsChatIntegrationTest {
 
         // администратор видит переписку и отвечает от поддержки
         mvc.perform(get("/api/admin/chats").with(role("buyer"))).andExpect(status().isForbidden());
-        mvc.perform(get("/api/admin/chats").param("q", "узкую").with(role("support")))
+        mvc.perform(get("/api/admin/chats").param("q", "лоферы").with(role("support")))
                 .andExpect(jsonPath("$[?(@.id == " + id + ")]").exists());
         mvc.perform(get("/api/admin/chats/{id}", id).with(role("admin")))
                 .andExpect(jsonPath("$.messages.length()").value(3))

@@ -166,6 +166,22 @@
       "realmRoles": [
         "finance"
       ]
+    },
+    {
+      "username": "buyer",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Анна",
+      "lastName": "Смирнова",
+      "email": "buyer@pacco.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "change-me-now",
+          "temporary": false
+        }
+      ],
+      "realmRoles": []
     }
   ],
   "registrationAllowed": true,

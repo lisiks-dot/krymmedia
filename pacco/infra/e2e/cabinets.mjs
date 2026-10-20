@@ -26,6 +26,9 @@ async function expectText(page, text, what) {
   }
 }
 
+const products = await (await fetch(`${BASE}/api/products`)).json();
+const loafers = products.find((p) => p.title.startsWith("Лоферы из замши")).id;
+
 const browser = await chromium.launch();
 try {
   console.log("Админка (admin)");
@@ -93,6 +96,14 @@ try {
   await admin.goto(`${BASE}/admin/notifications`);
   await expectText(admin, "Код получения", "журнал уведомлений");
   await admin.screenshot({ path: `${OUT}/ops-notifications.png`, fullPage: true });
+  await admin.goto(`${BASE}/admin/reviews`);
+  await expectText(admin, "Замша мягкая", "отзыв в админке");
+  await expectText(admin, "Спасибо за отзыв", "ответ ilpacco на отзыв");
+  await admin.screenshot({ path: `${OUT}/admin-reviews.png`, fullPage: true });
+  await admin.goto(`${BASE}/admin/chats`);
+  await admin.locator(".convs a").first().click();
+  await expectText(admin, "Колодка средняя", "переписка в админке");
+  await admin.screenshot({ path: `${OUT}/admin-chats.png`, fullPage: true });
   await admin.goto(`${BASE}/admin`);
   await expectText(admin, "Хаб: упаковка и передача", "обзор по этапам");
   await admin.screenshot({ path: `${OUT}/admin-overview.png`, fullPage: true });
@@ -127,6 +138,38 @@ try {
   await seller.getByRole("radio", { name: /Fattura/ }).click();
   await expectText(seller, "inversione contabile", "счёт на комиссию");
   await seller.screenshot({ path: `${OUT}/seller-invoice.png`, fullPage: true });
+
+  await seller.goto(`${BASE}/seller`);
+  await seller.locator("tr", { hasText: "Лоферы из замши" }).getByRole("button", { name: /file|Aggiungi/ }).click();
+  await expectText(seller, "Copertina", "фото товара у продавца");
+  await seller.screenshot({ path: `${OUT}/seller-media.png`, fullPage: true });
+  await seller.goto(`${BASE}/seller/reviews`);
+  await expectText(seller, "Замша мягкая", "отзыв у продавца");
+  await seller.screenshot({ path: `${OUT}/seller-reviews.png`, fullPage: true });
+  await seller.goto(`${BASE}/seller/messages`);
+  await seller.locator(".convs a").first().click();
+  await expectText(seller, "колодка узкая", "вопрос покупателя у продавца");
+  await expectText(seller, "[контакт скрыт]", "скрытая почта");
+  await seller.fill("#chat-text", "Abbiamo anche il 42 e il 43.");
+  await seller.getByRole("button", { name: "Invia" }).click();
+  await expectText(seller, "Abbiamo anche il 42", "ответ продавца в чате");
+  await seller.screenshot({ path: `${OUT}/seller-messages.png`, fullPage: true });
+
+  console.log("Покупатель (buyer): сообщения и отзывы");
+  const buyer = await (await browser.newContext({ locale: "ru-RU" })).newPage();
+  await buyer.goto(`${BASE}/account/messages`);
+  await login(buyer, "buyer");
+  await expectText(buyer, "Calzoleria Verdi", "диалог с продавцом");
+  await expectText(buyer, "Abbiamo anche il 42", "ответ продавца у покупателя");
+  await buyer.screenshot({ path: `${OUT}/store-account-messages.png`, fullPage: true });
+  await buyer.goto(`${BASE}/p/${loafers}#reviews`);
+  await expectText(buyer, "Покупка подтверждена", "отзыв на карточке");
+  await expectText(buyer, "Ответ продавца", "ответ продавца под отзывом");
+  await expectText(buyer, "Спасибо, ваш отзыв опубликован", "свой отзыв");
+  await buyer.locator("#reviews").screenshot({ path: `${OUT}/store-reviews.png` });
+  await buyer.getByRole("button", { name: "Задать вопрос продавцу" }).click();
+  await expectText(buyer, "Вопрос для Calzoleria Verdi", "форма вопроса продавцу");
+  await buyer.screenshot({ path: `${OUT}/store-product-photo.png` });
 
   await seller.goto(`${BASE}/sell`);
   await expectText(seller, "Come funziona", "страница для продавцов");

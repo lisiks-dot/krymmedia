@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToCart } from "@/components/AddToCart";
+import { AskSeller } from "@/components/AskSeller";
+import { Gallery } from "@/components/Gallery";
+import { Reviews } from "@/components/Reviews";
 import { SeenMarker } from "@/components/Client";
 import { IconCheck, IconShield, IconTruck } from "@/components/Icons";
-import { ProductArt } from "@/components/ProductArt";
 import { ProductCard } from "@/components/ProductCard";
 import { RecentlyViewed } from "@/components/Recently";
 import { eur, kg, rub, toRub } from "@/lib/format";
@@ -63,9 +65,7 @@ export default async function ProductPage({ params }: Props) {
       </nav>
 
       <div className="pdp">
-        <div className="pdp-gallery" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
-          <ProductArt id={p.id} title={p.title} category={p.category} size="hero" />
-        </div>
+        <Gallery id={p.id} title={p.title} category={p.category} media={p.media ?? []} />
 
         <div className="pdp-info">
           <div className="stack" style={{ gap: 6 }}>
@@ -86,6 +86,7 @@ export default async function ProductPage({ params }: Props) {
           </div>
 
           <AddToCart productId={p.id} title={p.title} sizes={p.sizes} priceLabel={rub(p.priceRub)} />
+          <AskSeller productId={p.id} sellerName={p.sellerName} />
 
           <ul className="facts-list">
             <li><IconShield /><span>Проверим соответствие заказу и сфотографируем товар на хабе в Милане</span></li>
@@ -126,6 +127,8 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </div>
       </div>
+
+      <Reviews productId={p.id} />
 
       {sameSeller.length ? (
         <section className="shelf" aria-labelledby="seller-h">

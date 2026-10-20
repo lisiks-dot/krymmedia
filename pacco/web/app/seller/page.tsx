@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth";
 import { ApiError, api } from "@/lib/client";
 import { PRODUCT_STATUS_IT, type Product, type Violation } from "@/lib/cabinet";
 import { eur, rub } from "@/lib/format";
 import type { Category } from "@/lib/types";
 import { useSeller } from "@/lib/seller-context";
+import { MediaManager } from "@/components/MediaManager";
 
 const CATEGORY_IT: Record<Category, string> = {
   CLOTHES: "Abbigliamento",
@@ -24,6 +25,7 @@ export default function SellerProducts() {
   const [products, setProducts] = useState<Product[] | null>(null);
   const [message, setMessage] = useState<{ tone: string; text: string } | null>(null);
   const [prices, setPrices] = useState<Record<number, string>>({});
+  const [openMedia, setOpenMedia] = useState<number | null>(null);
 
   // Modulo nuovo prodotto
   const [category, setCategory] = useState<Category>("SHOES");
@@ -73,7 +75,8 @@ export default function SellerProducts() {
           aerosol,
         }),
       });
-      setMessage({ tone: "ok", text: `«${p.title}» inviato in revisione. Di solito entro 24 ore.` });
+      setMessage({ tone: "ok", text: `«${p.title}» inviato in revisione. Di solito entro 24 ore. Intanto aggiungi foto e video.` });
+      setOpenMedia(p.id);
       formRef.current?.reset();
       setHsCode("");
       setPrice("");
@@ -111,14 +114,15 @@ export default function SellerProducts() {
         </div>
         <div className="scroll">
           <table className="t">
-            <thead><tr><th>Prodotto</th><th>Codice NC</th><th className="r">Prezzo</th><th>Stato</th><th>Nuovo prezzo, €</th></tr></thead>
+            <thead><tr><th>Prodotto</th><th>Codice NC</th><th className="r">Prezzo</th><th>Stato</th><th>Nuovo prezzo, €</th><th>Foto e video</th></tr></thead>
             <tbody>
               {products === null ? (
-                <tr><td colSpan={5} className="muted">Caricamento…</td></tr>
+                <tr><td colSpan={6} className="muted">Caricamento…</td></tr>
               ) : products.length === 0 ? (
-                <tr><td colSpan={5} className="muted">Nessun prodotto. Aggiungi il primo con il modulo qui sotto.</td></tr>
+                <tr><td colSpan={6} className="muted">Nessun prodotto. Aggiungi il primo con il modulo qui sotto.</td></tr>
               ) : products.map((p) => (
-                <tr key={p.id}>
+                <Fragment key={p.id}>
+                <tr>
                   <td>{p.title}<div className="small muted">{CATEGORY_IT[p.category]}</div></td>
                   <td className="num">{p.hsCode}</td>
                   <td className="r num">{eur(p.priceEurCents)}<div className="small muted">{rub(p.priceRub)} al cliente</div></td>
@@ -133,7 +137,22 @@ export default function SellerProducts() {
                       <button className="btn ghost sm" type="button" onClick={() => savePrice(p)} disabled={!prices[p.id]}>Salva</button>
                     </div>
                   </td>
+                  <td>
+                    <button className="btn ghost sm" type="button" aria-expanded={openMedia === p.id}
+                      onClick={() => setOpenMedia(openMedia === p.id ? null : p.id)}>
+                      {p.media?.length ? `${p.media.length} file` : "Aggiungi"}
+                    </button>
+                  </td>
                 </tr>
+                {openMedia === p.id ? (
+                  <tr className="media-row">
+                    <td colSpan={6}>
+                      <MediaManager productId={p.id} media={p.media ?? []}
+                        onChange={(m) => setProducts((prev) => prev?.map((x) => (x.id === p.id ? { ...x, media: m } : x)) ?? prev)} />
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
               ))}
             </tbody>
           </table>

@@ -28,6 +28,79 @@ export interface Product {
   description: string | null;
   status: string;
   blockReason: string | null;
+  media?: MediaItem[];
+}
+
+export interface MediaItem {
+  id: number;
+  kind: "IMAGE" | "VIDEO";
+  contentType: string;
+  url: string;
+}
+
+export interface ReviewReply {
+  id: number;
+  role: "SELLER" | "ADMIN";
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface Review {
+  id: number;
+  productId: number;
+  productTitle: string;
+  sellerId: number | null;
+  author: string;
+  size: string | null;
+  rating: number;
+  text: string;
+  verified: boolean;
+  hidden: boolean;
+  hiddenReason: string | null;
+  orderNumber: string | null;
+  createdAt: string;
+  replies: ReviewReply[];
+}
+
+export interface ProductReviews {
+  summary: { count: number; average: number; distribution: number[] };
+  reviews: Review[];
+}
+
+export interface ReviewEligibility {
+  canReview: boolean;
+  reason: string | null;
+  orderNumber: string | null;
+  mine: Review | null;
+}
+
+export interface Conversation {
+  id: number;
+  buyerName: string;
+  sellerId: number | null;
+  sellerName: string;
+  productId: number | null;
+  productTitle: string | null;
+  orderNumber: string | null;
+  lastMessageAt: string;
+  lastMessage: string | null;
+  unread: number;
+  createdAt: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  role: "BUYER" | "SELLER" | "ADMIN";
+  author: string;
+  text: string;
+  masked: boolean;
+  createdAt: string;
+}
+
+export interface ChatThread {
+  conversation: Conversation;
+  messages: ChatMessage[];
 }
 
 export interface Quote {

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import type { OrderView, Payouts, Product, Seller } from "@/lib/cabinet";
 import { eur, rub } from "@/lib/format";
-import type { DisputeView, OrderStatus } from "@/lib/types";
+import type { Conversation, DisputeView, OrderStatus } from "@/lib/types";
 
 type Tile = { href: string; label: string; value: string | number; hint: string; alert?: boolean };
 
@@ -16,6 +16,7 @@ export default function AdminHome() {
   const [orders, setOrders] = useState<OrderView[] | null>(null);
   const [disputes, setDisputes] = useState<{ dispute: DisputeView }[] | null>(null);
   const [payouts, setPayouts] = useState<{ payouts: Payouts }[] | null>(null);
+  const [chats, setChats] = useState<Conversation[] | null>(null);
 
   useEffect(() => {
     if (has("admin", "moderator")) {
@@ -24,6 +25,7 @@ export default function AdminHome() {
     }
     if (has("admin", "support", "ops")) call<OrderView[]>("/api/admin/orders?limit=200").then(setOrders).catch(() => setOrders([]));
     if (has("admin", "support")) call<{ dispute: DisputeView }[]>("/api/admin/disputes?status=OPEN").then(setDisputes).catch(() => setDisputes([]));
+    if (has("admin", "support", "moderator")) call<Conversation[]>("/api/admin/chats").then(setChats).catch(() => setChats([]));
     if (has("admin", "finance")) call<{ payouts: Payouts }[]>("/api/admin/payouts").then(setPayouts).catch(() => setPayouts([]));
   }, [call, has]);
 
@@ -55,6 +57,10 @@ export default function AdminHome() {
   }
   const care: Tile[] = [];
   if (disputes) care.push({ href: "/admin/disputes", label: "Открытые споры", value: disputes.length, hint: "ответ за 2 рабочих дня", alert: disputes.length > 0 });
+  if (chats) {
+    const waiting = chats.filter((c) => c.unread > 0).length;
+    care.push({ href: "/admin/chats", label: "Переписка", value: chats.length, hint: waiting ? `${waiting} — вопросы к ilpacco без ответа` : "диалоги покупателей и продавцов", alert: waiting > 0 });
+  }
   if (sellers) care.push({ href: "/admin/sellers", label: "Заявки продавцов", value: sellers.length, hint: "проверка за 3 дня" });
   if (pending) care.push({ href: "/admin/products", label: "Карточки на модерации", value: pending.length, hint: "SLA — 24 часа" });
   if (payouts) care.push({ href: "/admin/payouts", label: "К выплате продавцам", value: eur(payouts.reduce((s, r) => s + r.payouts.payableNetEurCents, 0)), hint: "в ближайшем реестре" });

@@ -6,10 +6,16 @@ import { ProductArt } from "./ProductArt";
 
 export function ProductCard({ p }: { p: Product }) {
   const dutyFree = p.priceEurCents <= 20000;
+  const cover = p.media?.find((m) => m.kind === "IMAGE");
   return (
     <article className="pcard">
       <Link href={`/p/${p.id}`}>
-        <ProductArt id={p.id} title={p.title} category={p.category} label={`${p.sellerName}: ${p.title}`} />
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="art art-card photo" src={cover.url} alt={`${p.sellerName}: ${p.title}`} loading="lazy" />
+        ) : (
+          <ProductArt id={p.id} title={p.title} category={p.category} label={`${p.sellerName}: ${p.title}`} />
+        )}
         <div className="tags">
           {p.region ? <span className="badge">{p.region}</span> : null}
           {dutyFree ? <span className="badge ok">Без пошлины</span> : null}

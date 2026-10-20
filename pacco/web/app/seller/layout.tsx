@@ -114,6 +114,8 @@ function Gate({ children }: { children: ReactNode }) {
     { href: "/seller", label: "Prodotti" },
     { href: "/seller/orders", label: "Ordini" },
     { href: "/seller/payouts", label: "Pagamenti" },
+    { href: "/seller/reviews", label: "Recensioni" },
+    { href: "/seller/messages", label: "Messaggi" },
   ];
   const current = (href: string) => (href === "/seller" ? path === "/seller" : path.startsWith(href));
   return (

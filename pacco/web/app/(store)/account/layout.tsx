@@ -15,6 +15,7 @@ function Shell({ children }: { children: ReactNode }) {
   }, [router]);
   const tabs = [
     { href: "/account", label: "Заказы" },
+    { href: "/account/messages", label: "Сообщения" },
     { href: "/account/profile", label: "Профиль" },
     { href: "/account/notifications", label: "Уведомления" },
   ];

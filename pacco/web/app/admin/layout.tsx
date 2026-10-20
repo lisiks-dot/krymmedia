@@ -16,6 +16,7 @@ const GROUPS: { title: string; items: Section[] }[] = [
       { href: "/admin/hub", label: "Хаб в Милане", roles: ["admin", "ops"] },
       { href: "/admin/delivery", label: "Таможня и ПВЗ", roles: ["admin", "ops"] },
       { href: "/admin/disputes", label: "Споры", roles: ["admin", "support"] },
+      { href: "/admin/chats", label: "Переписка", roles: ["admin", "support", "moderator"] },
       { href: "/admin/notifications", label: "Уведомления", roles: ["admin", "support"] },
     ],
   },
@@ -24,6 +25,7 @@ const GROUPS: { title: string; items: Section[] }[] = [
     items: [
       { href: "/admin/sellers", label: "Продавцы", roles: ["admin", "moderator"] },
       { href: "/admin/products", label: "Карточки", roles: ["admin", "moderator"] },
+      { href: "/admin/reviews", label: "Отзывы", roles: ["admin", "moderator", "support"] },
       { href: "/admin/import", label: "Импорт с Zalando", roles: ["admin", "moderator"] },
       { href: "/admin/compliance", label: "Комплаенс", roles: ["admin", "moderator"] },
     ],

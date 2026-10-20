@@ -150,6 +150,43 @@ api_post "$ops" "/api/ops/orders/$n4/handover" '{"tracking":"CDEK-1000301"}' >/d
 for s in customs release arrive; do api_post "$ops" "/api/ops/orders/$n4/$s" >/dev/null; done
 printf '%s\n%s\n%s\n%s\n' "$n4" "$k4" "$n2" "$n3" > "${STATE_FILE:-/tmp/ilpacco-orders}"
 
+step "Фото и видео товара от продавца"
+png=$(mktemp --suffix=.png)
+base64 -d > "$png" <<<"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+media=$(curl -fsS -X POST -H "Authorization: Bearer $seller" -F "file=@$png;type=image/png" "$BASE/api/seller/products/$loafers/media")
+murl=$(jq -r .url <<<"$media")
+[[ "$murl" == /api/products/$loafers/media/* ]] || fail "загрузка фото продавцом: $media"
+ctype=$(curl -fsS -o /dev/null -w '%{content_type}' "$BASE$murl")
+[[ "$ctype" == image/png* ]] || fail "фото товара отдаётся как $ctype"
+n_media=$(curl -fsS "$BASE/api/products/$loafers" | jq '.media | length')
+(( n_media >= 1 )) || fail "в карточке нет фото"
+
+step "Отзыв покупателя с подтверждённой покупкой и ответы"
+buyer=$(token_for buyer)
+[[ -n "$buyer" && "$buyer" != "null" ]] || fail "Keycloak не выдал токен покупателю"
+can=$(curl -fsS -H "Authorization: Bearer $buyer" "$BASE/api/products/$loafers/reviews/me" | jq -r .canReview)
+[[ "$can" == "false" ]] || fail "отзыв разрешён без покупки"
+api_post "$buyer" /api/me/orders/claim "{\"orders\":[{\"number\":\"$number\",\"key\":\"$key\"}]}" >/dev/null
+review=$(api_post "$buyer" "/api/products/$loafers/reviews" '{"rating":5,"text":"Замша мягкая, размер в размер. Шли 19 дней, на хабе прислали фото — всё совпало."}')
+rid=$(jq -r .id <<<"$review")
+[[ "$(jq -r .verified <<<"$review")" == "true" ]] || fail "отзыв без отметки о покупке: $review"
+api_post "$seller" "/api/seller/reviews/$rid/replies" '{"text":"Grazie, Анна! Рады, что подошли. Calzoleria Verdi"}' >/dev/null
+api_post "$support" "/api/admin/reviews/$rid/replies" '{"text":"Спасибо за отзыв! Фото с приёмки хранятся в карточке заказа."}' >/dev/null
+replies=$(curl -fsS "$BASE/api/products/$loafers/reviews" | jq --argjson id "$rid" '[.reviews[] | select(.id == $id)][0].replies | length')
+(( replies == 2 )) || fail "у отзыва $replies ответов, ожидали 2"
+
+step "Чат покупателя и продавца, переписка в админке"
+chat=$(api_post "$buyer" /api/me/chats "{\"productId\":$loafers,\"text\":\"Здравствуйте! Подскажите, колодка узкая? Пишите на anna@mail.ru\"}")
+cid=$(jq -r .conversation.id <<<"$chat")
+[[ "$(jq -r '.messages[0].masked' <<<"$chat")" == "true" ]] || fail "почта в чате не скрыта"
+api_post "$seller" "/api/seller/chats/$cid/messages" '{"text":"Buongiorno! Колодка средняя, на узкую стопу советуем на полразмера меньше."}' >/dev/null
+unread=$(curl -fsS -H "Authorization: Bearer $buyer" "$BASE/api/me/chats" | jq --argjson id "$cid" '[.[] | select(.id == $id)][0].unread')
+(( unread == 1 )) || fail "у покупателя $unread непрочитанных, ожидали 1"
+seen=$(curl -fsS -H "Authorization: Bearer $support" "$BASE/api/admin/chats/$cid" | jq '.messages | length')
+(( seen == 2 )) || fail "в админке $seen сообщений, ожидали 2"
+code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $seller" "$BASE/api/admin/chats")
+[[ "$code" == "403" ]] || fail "продавец видит всю переписку: $code"
+
 step "Права"
 code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $seller" "$BASE/api/admin/orders")
 [[ "$code" == "403" ]] || fail "продавец получил доступ к админке: $code"
@@ -159,7 +196,7 @@ code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $(token_
 [[ "$code" == "200" ]] || fail "финансы не видят реестр выплат: $code"
 
 step "Страницы отдаются"
-for path in /admin /seller /sell /legal /account "/orders/$number" "/pay/$n4" /silent-check-sso.html; do
+for path in /admin /seller /sell /legal /account /account/messages /seller/messages /seller/reviews /admin/chats /admin/reviews "/p/$loafers" "/orders/$number" "/pay/$n4" /silent-check-sso.html; do
   curl -fsS -o /dev/null "$BASE$path" || fail "$path недоступна"
 done
 login_page=$(curl -sS "$BASE/auth/realms/pacco/protocol/openid-connect/auth?client_id=pacco-web&response_type=code&scope=openid&redirect_uri=$BASE/admin&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256")

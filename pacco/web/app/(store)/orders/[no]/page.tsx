@@ -210,6 +210,21 @@ export default function OrderPage() {
             {order.items.map((l) => <LineRow key={l.lineNo} line={l} />)}
           </section>
 
+          {owner && ["RECEIVED", "COMPLETED"].includes(order.status) ? (
+            <section className="panel">
+              <h3>Как вам покупка?</h3>
+              <p className="small muted" style={{ margin: 0 }}>Отзыв поможет другим покупателям с выбором размера. Отзывы пишут только те, кто получил заказ.</p>
+              <ul className="rate-list">
+                {order.items.filter((l) => ["ACCEPTED", "SHIPPED", "RETURNED"].includes(l.state)).map((l) => (
+                  <li key={l.lineNo}>
+                    <span>{l.title}{l.size ? `, ${l.size}` : ""}</span>
+                    <Link className="btn ghost sm" href={`/p/${l.productId}#reviews`}>Оставить отзыв</Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           {order.photos.some((p) => p.kind === "HUB") ? (
             <section className="panel">
               <h3>Фото с приёмки на хабе</h3>
@@ -233,6 +248,7 @@ export default function OrderPage() {
           <span>{order.buyerName}</span>
           {!owner ? <span className="small muted">Полные данные и действия с заказом — в браузере, где он оформлен, по ссылке из СМС или после <Link href="/account">входа в кабинет</Link>.</span> : null}
           {owner && !order.linkedToAccount ? <Link className="small" href="/account">Сохранить заказ в личном кабинете</Link> : null}
+          {owner ? <Link className="small" href="/account/messages">Переписка с продавцами</Link> : null}
           <Link className="small" href="/help#returns">Как работают возврат и споры</Link>
         </aside>
       </div>

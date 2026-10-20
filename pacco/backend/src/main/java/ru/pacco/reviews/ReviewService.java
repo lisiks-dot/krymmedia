@@ -95,14 +95,14 @@ public class ReviewService {
         Long owner = catalog.find(r.getProductId()).map(ProductSnapshot::sellerId).orElse(null);
         if (owner == null || owner != sellerId) throw BusinessException.notFound("Отзыв");
         r.reply("SELLER", sellerName, clean(text));
-        return view(r, null, false);
+        return view(reviews.saveAndFlush(r), null, false);
     }
 
     @Transactional
     public ReviewView staffReply(long reviewId, String text) {
         Review r = require(reviewId);
         r.reply("ADMIN", "ilpacco", clean(text));
-        return view(r, null, true);
+        return view(reviews.saveAndFlush(r), null, true);
     }
 
     @Transactional
