@@ -36,21 +36,25 @@ class SellerProductController {
     private final ComplianceService compliance;
     private final PricingService pricing;
     private final SellerDirectory sellers;
+    private final MediaService media;
 
     SellerProductController(ProductRepository products, ComplianceService compliance, PricingService pricing,
-                            SellerDirectory sellers) {
+                            SellerDirectory sellers, MediaService media) {
         this.products = products;
         this.compliance = compliance;
         this.pricing = pricing;
         this.sellers = sellers;
+        this.media = media;
     }
 
     @GetMapping("/api/seller/products")
     @Transactional(readOnly = true)
     List<ProductDto> mine(@AuthenticationPrincipal Jwt jwt) {
         SellerView me = sellers.requireActive(jwt.getSubject());
-        return products.findBySellerIdOrderById(me.id()).stream()
-                .map(p -> ProductDto.of(p, pricing.rub(p.getPriceEurCents())))
+        List<Product> mine = products.findBySellerIdOrderById(me.id());
+        var byProduct = media.of(mine.stream().map(Product::getId).toList());
+        return mine.stream()
+                .map(p -> ProductDto.of(p, pricing.rub(p.getPriceEurCents()), byProduct.getOrDefault(p.getId(), List.of())))
                 .toList();
     }
 
@@ -75,6 +79,36 @@ class SellerProductController {
         requireCompliant(new ItemSpec(p.getCategory(), p.getHsCode(), req.priceEurCents(), p.isAerosol()));
         p.changePrice(req.priceEurCents());
         return ProductDto.of(p, pricing.rub(p.getPriceEurCents()));
+    }
+
+    @PostMapping(path = "/api/seller/products/{id}/media", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    MediaService.MediaDto upload(@AuthenticationPrincipal Jwt jwt, @PathVariable long id,
+                                 @org.springframework.web.bind.annotation.RequestPart("file") org.springframework.web.multipart.MultipartFile file) {
+        owned(jwt, id);
+        return media.upload(id, file, "seller");
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/api/seller/products/{id}/media/{mediaId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void deleteMedia(@AuthenticationPrincipal Jwt jwt, @PathVariable long id, @PathVariable long mediaId) {
+        owned(jwt, id);
+        media.delete(id, mediaId);
+    }
+
+    record Order(List<Long> ids) {
+    }
+
+    @PutMapping("/api/seller/products/{id}/media/order")
+    List<MediaService.MediaDto> reorder(@AuthenticationPrincipal Jwt jwt, @PathVariable long id, @RequestBody Order body) {
+        owned(jwt, id);
+        return media.reorder(id, body.ids());
+    }
+
+    private Product owned(Jwt jwt, long id) {
+        SellerView me = sellers.requireActive(jwt.getSubject());
+        return products.findById(id).filter(x -> Long.valueOf(me.id()).equals(x.getSellerId()))
+                .orElseThrow(() -> BusinessException.notFound("Товар"));
     }
 
     private void requireCompliant(ItemSpec spec) {

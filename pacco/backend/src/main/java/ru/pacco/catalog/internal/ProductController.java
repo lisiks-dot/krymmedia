@@ -24,10 +24,12 @@ class ProductController {
 
     private final ProductRepository products;
     private final PricingService pricing;
+    private final MediaService media;
 
-    ProductController(ProductRepository products, PricingService pricing) {
+    ProductController(ProductRepository products, PricingService pricing, MediaService media) {
         this.products = products;
         this.pricing = pricing;
+        this.media = media;
     }
 
     @GetMapping("/api/products")
@@ -49,8 +51,10 @@ class ProductController {
             }
             return cb.and(ps.toArray(Predicate[]::new));
         };
-        return products.findAll(spec, Sort.by("id")).stream()
-                .map(p -> ProductDto.of(p, pricing.rub(p.getPriceEurCents())))
+        List<Product> found = products.findAll(spec, Sort.by("id"));
+        var byProduct = media.of(found.stream().map(Product::getId).toList());
+        return found.stream()
+                .map(p -> ProductDto.of(p, pricing.rub(p.getPriceEurCents()), byProduct.getOrDefault(p.getId(), List.of())))
                 .toList();
     }
 
@@ -59,7 +63,7 @@ class ProductController {
     ProductDto get(@PathVariable long id) {
         return products.findById(id)
                 .filter(p -> p.getStatus() == ProductStatus.PUBLISHED)
-                .map(p -> ProductDto.of(p, pricing.rub(p.getPriceEurCents())))
+                .map(p -> ProductDto.of(p, pricing.rub(p.getPriceEurCents()), media.of(p.getId())))
                 .orElseThrow(() -> BusinessException.notFound("Товар"));
     }
 }

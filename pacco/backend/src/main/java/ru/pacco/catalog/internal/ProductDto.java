@@ -19,11 +19,16 @@ public record ProductDto(
         String description,
         ProductStatus status,
         String blockReason,
-        Long sellerId) {
+        Long sellerId,
+        List<MediaService.MediaDto> media) {
 
     static ProductDto of(Product p, long priceRub) {
+        return of(p, priceRub, List.of());
+    }
+
+    static ProductDto of(Product p, long priceRub, List<MediaService.MediaDto> media) {
         return new ProductDto(p.getId(), p.getTitle(), p.getSellerName(), p.getRegion(), p.getCategory(),
                 p.getHsCode(), p.getPriceEurCents(), priceRub, p.getWeightGrams(), p.sizeList(),
-                p.getDescription(), p.getStatus(), p.getBlockReason(), p.getSellerId());
+                p.getDescription(), p.getStatus(), p.getBlockReason(), p.getSellerId(), media == null ? List.of() : media);
     }
 }

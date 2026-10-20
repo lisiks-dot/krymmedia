@@ -38,6 +38,18 @@ public class ProductCatalog {
                 .map(p -> p.toSnapshot());
     }
 
+    /** Товар в любом статусе — для отзывов и чата (продавец, название). */
+    @Transactional(readOnly = true)
+    public Optional<ProductSnapshot> find(long id) {
+        return products.findById(id).map(p -> p.toSnapshot());
+    }
+
+    /** id всех товаров продавца — для его отзывов. */
+    @Transactional(readOnly = true)
+    public List<Long> idsOfSeller(long sellerId) {
+        return products.findBySellerIdOrderById(sellerId).stream().map(Product::getId).toList();
+    }
+
     /** Товар площадки (без продавца-партнёра), например из импорта каталога поставщика. */
     public record NewOperatorProduct(String sellerName, String title, Category category, String hsCode,
                                      long priceEurCents, int weightGrams, List<String> sizes, String description) {

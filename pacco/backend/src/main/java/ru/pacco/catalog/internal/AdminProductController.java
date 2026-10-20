@@ -30,26 +30,39 @@ class AdminProductController {
     private final ProductRepository products;
     private final ComplianceService compliance;
     private final PricingService pricing;
+    private final MediaService media;
 
-    AdminProductController(ProductRepository products, ComplianceService compliance, PricingService pricing) {
+    AdminProductController(ProductRepository products, ComplianceService compliance, PricingService pricing, MediaService media) {
         this.products = products;
         this.compliance = compliance;
         this.pricing = pricing;
+        this.media = media;
+    }
+
+    /** Модератор убирает неподходящее фото или видео. */
+    @org.springframework.web.bind.annotation.DeleteMapping("/api/admin/products/{id}/media/{mediaId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void deleteMedia(@PathVariable long id, @PathVariable long mediaId) {
+        media.delete(id, mediaId);
     }
 
     @GetMapping("/api/admin/products")
     @Transactional(readOnly = true)
     List<ProductDto> all() {
-        return products.findAll(Sort.by("id")).stream()
-                .map(p -> ProductDto.of(p, pricing.rub(p.getPriceEurCents())))
+        List<Product> all = products.findAll(Sort.by("id"));
+        var byProduct = media.of(all.stream().map(Product::getId).toList());
+        return all.stream()
+                .map(p -> ProductDto.of(p, pricing.rub(p.getPriceEurCents()), byProduct.getOrDefault(p.getId(), List.of())))
                 .toList();
     }
 
     @GetMapping("/api/admin/products/pending")
     @Transactional(readOnly = true)
     List<ProductDto> pending() {
-        return products.findByStatusOrderById(ProductStatus.PENDING).stream()
-                .map(p -> ProductDto.of(p, pricing.rub(p.getPriceEurCents())))
+        List<Product> pending = products.findByStatusOrderById(ProductStatus.PENDING);
+        var byProduct = media.of(pending.stream().map(Product::getId).toList());
+        return pending.stream()
+                .map(p -> ProductDto.of(p, pricing.rub(p.getPriceEurCents()), byProduct.getOrDefault(p.getId(), List.of())))
                 .toList();
     }
 

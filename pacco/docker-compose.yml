@@ -84,6 +84,9 @@ services:
       SMS_RU_API_ID: ${SMS_RU_API_ID:-}
       SMS_SENDER: ${SMS_SENDER:-}
       RUB_PER_EUR: ${RUB_PER_EUR:-113.3}
+      MEDIA_DIR: /data/media
+    volumes:
+      - media:/data/media
     depends_on:
       postgres:
         condition: service_healthy
@@ -128,6 +131,7 @@ services:
       - keycloak
 
 volumes:
+  media:
   pgdata:
   redisdata:
   caddy_data:

@@ -9,7 +9,8 @@ RUN mvn -B -q package -DskipTests
 # Запуск
 FROM eclipse-temurin:25-jre
 WORKDIR /app
-RUN useradd --system --uid 10001 pacco
+# /data/media — том с фото и видео товаров; владелец pacco, чтобы новый том унаследовал права
+RUN useradd --system --uid 10001 pacco && mkdir -p /data/media && chown pacco /data/media
 COPY --from=build /src/target/pacco-backend.jar app.jar
 USER pacco
 EXPOSE 8080

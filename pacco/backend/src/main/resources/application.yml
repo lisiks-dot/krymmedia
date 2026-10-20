@@ -20,8 +20,8 @@ spring:
       fail-on-null-for-primitives: false
   servlet:
     multipart:
-      max-file-size: 6MB
-      max-request-size: 7MB
+      max-file-size: 64MB
+      max-request-size: 70MB
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -54,6 +54,9 @@ springdoc:
     path: /swagger-ui.html
 
 pacco:
+  media:
+    # Фото и видео товаров. В Docker — том media (см. docker-compose.yml)
+    dir: ${MEDIA_DIR:${java.io.tmpdir}/ilpacco-media}
   sourcing:
     # Импорт каталога Zalando: честный бот, пауза между запросами, наценка к рознице поставщика
     user-agent: ${SOURCING_USER_AGENT:ilpacco-catalog-import/0.4 (+https://ilpacco.ru/legal#bot)}
