@@ -32,6 +32,10 @@ if [[ ! -f server.env ]]; then
   echo "Создан server.env с новыми паролями (только на этом сервере)."
 fi
 
+# Обновление: сначала собираем новые образы, пока старая версия работает, — простой сайта сокращается до минуты.
+echo "Собираем образы (первый раз 5–10 минут, сайт пока работает)…"
+docker compose --env-file server.env build
+
 # Свободные порты: на сервере уже работают другие сайты и сервисы — занятые порты не трогаем, берём следующие.
 docker compose --env-file server.env down --remove-orphans >/dev/null 2>&1 || true
 busy() { ss -Hltn "( sport = :$1 )" 2>/dev/null | grep -q . ; }
@@ -48,8 +52,8 @@ TAKEN=""
 echo "Порты (занятые другими сервисами пропускаем):"
 pick HTTP_PORT 8080; pick HTTPS_PORT 8443; pick MAILPIT_PORT 8026; pick DB_HOST_PORT 15432; pick REDIS_HOST_PORT 16379
 
-echo "Собираем и запускаем (первый раз 5–10 минут)…"
-docker compose --env-file server.env up -d --build
+echo "Запускаем…"
+docker compose --env-file server.env up -d
 
 PORT=$(grep ^HTTP_PORT server.env | cut -d= -f2)
 for i in $(seq 1 120); do
